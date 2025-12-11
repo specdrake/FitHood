@@ -20,16 +20,16 @@ interface FitHoodDB extends DBSchema {
 }
 
 const DB_NAME = 'fithood-db';
-const DB_VERSION = 2; // Bumped version for user support
+const DB_VERSION = 3; // Bumped version to fix conflicts
 
 let dbPromise: Promise<IDBPDatabase<FitHoodDB>> | null = null;
 
-function getDB(): Promise<IDBPDatabase<FitHoodDB>> {
+async function getDB(): Promise<IDBPDatabase<FitHoodDB>> {
   if (!dbPromise) {
     dbPromise = openDB<FitHoodDB>(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {
-        // Delete old stores if upgrading from v1
-        if (oldVersion < 2) {
+        // Delete old stores if upgrading
+        if (oldVersion < DB_VERSION) {
           if (db.objectStoreNames.contains('foods')) {
             db.deleteObjectStore('foods');
           }
@@ -65,6 +65,22 @@ function getDB(): Promise<IDBPDatabase<FitHoodDB>> {
           weightStore.createIndex('by-user-date', ['userId', 'date']);
         }
       },
+      blocked() {
+        console.warn('Database upgrade blocked. Please close other tabs.');
+      },
+      blocking() {
+        // Close the database connection if we're blocking another upgrade
+        dbPromise = null;
+      },
+    }).catch(async (error) => {
+      // If there's a version error, delete the database and retry
+      if (error.name === 'VersionError') {
+        console.warn('Database version conflict, resetting database...');
+        await indexedDB.deleteDatabase(DB_NAME);
+        dbPromise = null;
+        return getDB();
+      }
+      throw error;
     });
   }
   return dbPromise;

@@ -1,7 +1,7 @@
-const CACHE_NAME = 'fithood-v1';
+const CACHE_NAME = 'fithood-v3';
 const urlsToCache = [
-  '/',
   '/manifest.json',
+  '/icons/icon.svg',
 ];
 
 self.addEventListener('install', (event) => {
@@ -27,6 +27,22 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
+  // Always fetch JS, CSS, and HTML from network first
+  if (
+    event.request.mode === 'navigate' ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css') ||
+    url.pathname.startsWith('/_next/')
+  ) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+  
+  // For other assets, use cache-first strategy
   event.respondWith(
     caches.match(event.request).then((response) => {
       if (response) {
@@ -45,4 +61,3 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
-
