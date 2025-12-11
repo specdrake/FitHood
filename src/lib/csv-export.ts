@@ -13,10 +13,11 @@ function downloadCSV(content: string, filename: string) {
 }
 
 export function exportFoodsToCSV(foods: FoodEntry[]) {
-  const headers = ['date', 'name', 'calories', 'protein', 'carbs', 'fat', 'fiber', 'sugar', 'mealType'];
+  const headers = ['date', 'name', 'count', 'calories', 'protein', 'carbs', 'fat', 'fiber', 'sugar', 'mealType'];
   const rows = foods.map(food => [
     food.date,
     `"${food.name.replace(/"/g, '""')}"`,
+    food.count || 1,
     food.calories,
     food.protein,
     food.carbs,
