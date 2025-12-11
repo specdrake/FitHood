@@ -85,8 +85,12 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
   const totalProtein = summaries.reduce((sum, s) => sum + s.totalProtein, 0);
   const totalCarbs = summaries.reduce((sum, s) => sum + s.totalCarbs, 0);
   const totalFat = summaries.reduce((sum, s) => sum + s.totalFat, 0);
-  const avgCalories = summaries.length > 0 ? Math.round(totalCalories / summaries.length) : 0;
-  const avgProtein = summaries.length > 0 ? Math.round(totalProtein / summaries.length) : 0;
+  
+  // Only count days that have actual data for averages
+  const daysWithCalories = summaries.filter(s => s.totalCalories > 0).length;
+  const daysWithProtein = summaries.filter(s => s.totalProtein > 0).length;
+  const avgCalories = daysWithCalories > 0 ? Math.round(totalCalories / daysWithCalories) : 0;
+  const avgProtein = daysWithProtein > 0 ? Math.round(totalProtein / daysWithProtein) : 0;
 
   const macroPercentages = getMacroPercentages(totalProtein, totalCarbs, totalFat);
   const macroData = [

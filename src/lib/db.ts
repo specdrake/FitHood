@@ -26,20 +26,25 @@ export async function addFoodEntries(userId: string, entries: FoodEntry[]): Prom
 export async function updateFoodEntry(id: string, entry: Partial<FoodEntry>): Promise<void> {
   const supabase = getSupabase();
   
-  const updates: Record<string, unknown> = {};
-  if (entry.date !== undefined) updates.date = entry.date;
-  if (entry.name !== undefined) updates.name = entry.name;
-  if (entry.calories !== undefined) updates.calories = entry.calories;
-  if (entry.protein !== undefined) updates.protein = entry.protein;
-  if (entry.carbs !== undefined) updates.carbs = entry.carbs;
-  if (entry.fat !== undefined) updates.fat = entry.fat;
-  if (entry.fiber !== undefined) updates.fiber = entry.fiber;
-  if (entry.sugar !== undefined) updates.sugar = entry.sugar;
-  if (entry.count !== undefined) updates.count = entry.count;
-  if (entry.mealType !== undefined) updates.meal_type = entry.mealType;
+  // Build update object with all provided fields
+  const updates: Record<string, unknown> = {
+    date: entry.date,
+    name: entry.name,
+    calories: entry.calories,
+    protein: entry.protein,
+    carbs: entry.carbs,
+    fat: entry.fat,
+    fiber: entry.fiber ?? null,
+    sugar: entry.sugar ?? null,
+    count: entry.count || 1,
+    meal_type: entry.mealType ?? null,
+  };
 
   const { error } = await supabase.from('foods').update(updates).eq('id', id);
-  if (error) throw error;
+  if (error) {
+    console.error('Update food error:', error);
+    throw error;
+  }
 }
 
 export async function getFoodsByDate(userId: string, date: string): Promise<FoodEntry[]> {
@@ -171,20 +176,25 @@ export async function deleteWorkoutEntry(id: string): Promise<void> {
 export async function updateWorkoutEntry(id: string, entry: Partial<WorkoutEntry>): Promise<void> {
   const supabase = getSupabase();
   
-  const updates: Record<string, unknown> = {};
-  if (entry.date !== undefined) updates.date = entry.date;
-  if (entry.exercise !== undefined) updates.exercise = entry.exercise;
-  if (entry.category !== undefined) updates.category = entry.category;
-  if (entry.sets !== undefined) updates.sets = entry.sets;
-  if (entry.reps !== undefined) updates.reps = entry.reps;
-  if (entry.weight !== undefined) updates.weight = entry.weight;
-  if (entry.duration !== undefined) updates.duration = entry.duration;
-  if (entry.distance !== undefined) updates.distance = entry.distance;
-  if (entry.caloriesBurned !== undefined) updates.calories_burned = entry.caloriesBurned;
-  if (entry.notes !== undefined) updates.notes = entry.notes;
+  // Build update object with all provided fields
+  const updates: Record<string, unknown> = {
+    date: entry.date,
+    exercise: entry.exercise,
+    category: entry.category,
+    sets: entry.sets ?? null,
+    reps: entry.reps ?? null,
+    weight: entry.weight ?? null,
+    duration: entry.duration ?? null,
+    distance: entry.distance ?? null,
+    calories_burned: entry.caloriesBurned ?? null,
+    notes: entry.notes ?? null,
+  };
 
   const { error } = await supabase.from('workouts').update(updates).eq('id', id);
-  if (error) throw error;
+  if (error) {
+    console.error('Update workout error:', error);
+    throw error;
+  }
 }
 
 // Weight operations
