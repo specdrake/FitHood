@@ -20,6 +20,7 @@ import { FoodEntry, WorkoutEntry, WeightEntry, DailySummary } from '@/lib/types'
 import { formatDisplayDate, getDateRange, groupByDate, calculateDailySummary, getMacroPercentages } from '@/lib/utils';
 
 interface DashboardProps {
+  userId: string;
   refreshTrigger: number;
 }
 
@@ -30,24 +31,26 @@ const COLORS = {
   cyan: '#00d4ff',
 };
 
-export default function Dashboard({ refreshTrigger }: DashboardProps) {
+export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
   const [summaries, setSummaries] = useState<DailySummary[]>([]);
   const [weights, setWeights] = useState<WeightEntry[]>([]);
   const [dateRange, setDateRange] = useState(7);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
-  }, [dateRange, refreshTrigger]);
+    if (userId) {
+      loadData();
+    }
+  }, [userId, dateRange, refreshTrigger]);
 
   const loadData = async () => {
     setIsLoading(true);
     try {
       const { startDate, endDate } = getDateRange(dateRange);
       const [foods, workouts, weightData] = await Promise.all([
-        getFoodsByDateRange(startDate, endDate),
-        getWorkoutsByDateRange(startDate, endDate),
-        getAllWeights(),
+        getFoodsByDateRange(userId, startDate, endDate),
+        getWorkoutsByDateRange(userId, startDate, endDate),
+        getAllWeights(userId),
       ]);
 
       const foodsByDate = groupByDate(foods);
@@ -361,4 +364,3 @@ export default function Dashboard({ refreshTrigger }: DashboardProps) {
     </div>
   );
 }
-

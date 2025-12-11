@@ -2,9 +2,17 @@
 
 import { cn } from '@/lib/utils';
 
+interface User {
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+}
+
 interface NavigationProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  user?: User;
+  onLogout?: () => void;
 }
 
 const tabs = [
@@ -13,9 +21,10 @@ const tabs = [
   { id: 'workouts', label: 'Workouts', icon: '💪' },
   { id: 'weight', label: 'Weight', icon: '⚖️' },
   { id: 'upload', label: 'Upload', icon: '📤' },
+  { id: 'settings', label: 'Settings', icon: '⚙️' },
 ];
 
-export default function Navigation({ activeTab, onTabChange }: NavigationProps) {
+export default function Navigation({ activeTab, onTabChange, user, onLogout }: NavigationProps) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/10 md:relative md:border-t-0 md:border-b">
       <div className="max-w-6xl mx-auto px-4">
@@ -32,19 +41,48 @@ export default function Navigation({ activeTab, onTabChange }: NavigationProps) 
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                'flex flex-col md:flex-row items-center gap-1 md:gap-2 px-3 md:px-5 py-3 md:py-4 rounded-lg transition-all duration-200',
+                'flex flex-col md:flex-row items-center gap-1 md:gap-2 px-2 md:px-4 py-3 md:py-4 rounded-lg transition-all duration-200',
                 activeTab === tab.id
                   ? 'text-electric bg-electric/10'
                   : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
               )}
             >
-              <span className="text-xl md:text-lg">{tab.icon}</span>
-              <span className="text-xs md:text-sm font-medium">{tab.label}</span>
+              <span className="text-lg md:text-lg">{tab.icon}</span>
+              <span className="text-[10px] md:text-sm font-medium">{tab.label}</span>
             </button>
           ))}
+
+          {/* User section - Desktop only */}
+          {user && (
+            <div className="hidden md:flex items-center gap-3 ml-auto py-3 pl-4 border-l border-white/10">
+              <div className="flex items-center gap-3">
+                {user.image ? (
+                  <img 
+                    src={user.image} 
+                    alt={user.name || ''} 
+                    className="w-9 h-9 rounded-full border-2 border-electric/30"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-electric/20 flex items-center justify-center text-sm font-bold text-electric">
+                    {user.name?.[0]?.toUpperCase() || '?'}
+                  </div>
+                )}
+                <div className="text-right">
+                  <p className="text-sm font-medium">{user.name}</p>
+                  <p className="text-xs text-gray-500">{user.email}</p>
+                </div>
+              </div>
+              <button
+                onClick={onLogout}
+                className="px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-coral hover:bg-coral/10 transition-all"
+                title="Sign out"
+              >
+                🚪
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </nav>
   );
 }
-

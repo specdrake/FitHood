@@ -16,11 +16,12 @@ import { WeightEntry } from '@/lib/types';
 import { formatDisplayDate, formatDate } from '@/lib/utils';
 
 interface WeightTrackerProps {
+  userId: string;
   refreshTrigger: number;
   onUpdate: () => void;
 }
 
-export default function WeightTracker({ refreshTrigger, onUpdate }: WeightTrackerProps) {
+export default function WeightTracker({ userId, refreshTrigger, onUpdate }: WeightTrackerProps) {
   const [weights, setWeights] = useState<WeightEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -29,13 +30,15 @@ export default function WeightTracker({ refreshTrigger, onUpdate }: WeightTracke
   const [newBodyFat, setNewBodyFat] = useState('');
 
   useEffect(() => {
-    loadData();
-  }, [refreshTrigger]);
+    if (userId) {
+      loadData();
+    }
+  }, [userId, refreshTrigger]);
 
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const allWeights = await getAllWeights();
+      const allWeights = await getAllWeights(userId);
       setWeights(allWeights.sort((a, b) => a.date.localeCompare(b.date)));
     } catch (error) {
       console.error('Failed to load weight data:', error);
@@ -56,7 +59,7 @@ export default function WeightTracker({ refreshTrigger, onUpdate }: WeightTracke
       bodyFat: newBodyFat ? parseFloat(newBodyFat) : undefined,
     };
 
-    await addWeightEntry(entry);
+    await addWeightEntry(userId, entry);
     setNewWeight('');
     setNewBodyFat('');
     setShowAddForm(false);
@@ -311,4 +314,3 @@ export default function WeightTracker({ refreshTrigger, onUpdate }: WeightTracke
     </div>
   );
 }
-
