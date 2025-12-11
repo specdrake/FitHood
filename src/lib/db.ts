@@ -1,105 +1,39 @@
-import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { getSupabase } from './supabase';
 import { FoodEntry, WorkoutEntry, WeightEntry } from './types';
 
-interface FitHoodDB extends DBSchema {
-  foods: {
-    key: string;
-    value: FoodEntry & { userId: string };
-    indexes: { 'by-date': string; 'by-user': string; 'by-user-date': [string, string] };
-  };
-  workouts: {
-    key: string;
-    value: WorkoutEntry & { userId: string };
-    indexes: { 'by-date': string; 'by-user': string; 'by-user-date': [string, string] };
-  };
-  weights: {
-    key: string;
-    value: WeightEntry & { userId: string };
-    indexes: { 'by-date': string; 'by-user': string; 'by-user-date': [string, string] };
-  };
-}
-
-const DB_NAME = 'fithood-db';
-const DB_VERSION = 3; // Bumped version to fix conflicts
-
-let dbPromise: Promise<IDBPDatabase<FitHoodDB>> | null = null;
-
-async function getDB(): Promise<IDBPDatabase<FitHoodDB>> {
-  if (!dbPromise) {
-    dbPromise = openDB<FitHoodDB>(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion) {
-        // Delete old stores if upgrading
-        if (oldVersion < DB_VERSION) {
-          if (db.objectStoreNames.contains('foods')) {
-            db.deleteObjectStore('foods');
-          }
-          if (db.objectStoreNames.contains('workouts')) {
-            db.deleteObjectStore('workouts');
-          }
-          if (db.objectStoreNames.contains('weights')) {
-            db.deleteObjectStore('weights');
-          }
-        }
-
-        // Foods store with user index
-        if (!db.objectStoreNames.contains('foods')) {
-          const foodStore = db.createObjectStore('foods', { keyPath: 'id' });
-          foodStore.createIndex('by-date', 'date');
-          foodStore.createIndex('by-user', 'userId');
-          foodStore.createIndex('by-user-date', ['userId', 'date']);
-        }
-        
-        // Workouts store with user index
-        if (!db.objectStoreNames.contains('workouts')) {
-          const workoutStore = db.createObjectStore('workouts', { keyPath: 'id' });
-          workoutStore.createIndex('by-date', 'date');
-          workoutStore.createIndex('by-user', 'userId');
-          workoutStore.createIndex('by-user-date', ['userId', 'date']);
-        }
-        
-        // Weights store with user index
-        if (!db.objectStoreNames.contains('weights')) {
-          const weightStore = db.createObjectStore('weights', { keyPath: 'id' });
-          weightStore.createIndex('by-date', 'date');
-          weightStore.createIndex('by-user', 'userId');
-          weightStore.createIndex('by-user-date', ['userId', 'date']);
-        }
-      },
-      blocked() {
-        console.warn('Database upgrade blocked. Please close other tabs.');
-      },
-      blocking() {
-        // Close the database connection if we're blocking another upgrade
-        dbPromise = null;
-      },
-    }).catch(async (error) => {
-      // If there's a version error, delete the database and retry
-      if (error.name === 'VersionError') {
-        console.warn('Database version conflict, resetting database...');
-        await indexedDB.deleteDatabase(DB_NAME);
-        dbPromise = null;
-        return getDB();
-      }
-      throw error;
-    });
-  }
-  return dbPromise;
-}
-
-// Food operations (user-scoped)
+// Food operations
 export async function addFoodEntries(userId: string, entries: FoodEntry[]): Promise<void> {
-  const db = await getDB();
-  const tx = db.transaction('foods', 'readwrite');
-  await Promise.all(
-    entries.map((entry) => tx.store.put({ ...entry, userId }))
-  );
-  await tx.done;
+  const supabase = getSupabase();
+  
+  const rows = entries.map(entry => ({
+    user_id: userId,
+    date: entry.date,
+    name: entry.name,
+    calories: entry.calories,
+    protein: entry.protein,
+    carbs: entry.carbs,
+    fat: entry.fat,
+    fiber: entry.fiber,
+    sugar: entry.sugar,
+    meal_type: entry.mealType,
+  }));
+
+  const { error } = await supabase.from('foods').insert(rows);
+  if (error) throw error;
 }
 
 export async function getFoodsByDate(userId: string, date: string): Promise<FoodEntry[]> {
-  const db = await getDB();
-  const entries = await db.getAllFromIndex('foods', 'by-user-date', [userId, date]);
-  return entries.map(({ userId: _, ...entry }) => entry as FoodEntry);
+  const supabase = getSupabase();
+  
+  const { data, error } = await supabase
+    .from('foods')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('date', date)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data || []).map(mapFoodRow);
 }
 
 export async function getFoodsByDateRange(
@@ -107,38 +41,73 @@ export async function getFoodsByDateRange(
   startDate: string,
   endDate: string
 ): Promise<FoodEntry[]> {
-  const db = await getDB();
-  const allUserFoods = await db.getAllFromIndex('foods', 'by-user', userId);
-  return allUserFoods
-    .filter((f) => f.date >= startDate && f.date <= endDate)
-    .map(({ userId: _, ...entry }) => entry as FoodEntry);
+  const supabase = getSupabase();
+  
+  const { data, error } = await supabase
+    .from('foods')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('date', startDate)
+    .lte('date', endDate)
+    .order('date', { ascending: false });
+
+  if (error) throw error;
+  return (data || []).map(mapFoodRow);
 }
 
 export async function getAllFoods(userId: string): Promise<FoodEntry[]> {
-  const db = await getDB();
-  const entries = await db.getAllFromIndex('foods', 'by-user', userId);
-  return entries.map(({ userId: _, ...entry }) => entry as FoodEntry);
+  const supabase = getSupabase();
+  
+  const { data, error } = await supabase
+    .from('foods')
+    .select('*')
+    .eq('user_id', userId)
+    .order('date', { ascending: false });
+
+  if (error) throw error;
+  return (data || []).map(mapFoodRow);
 }
 
 export async function deleteFoodEntry(id: string): Promise<void> {
-  const db = await getDB();
-  await db.delete('foods', id);
+  const supabase = getSupabase();
+  const { error } = await supabase.from('foods').delete().eq('id', id);
+  if (error) throw error;
 }
 
-// Workout operations (user-scoped)
+// Workout operations
 export async function addWorkoutEntries(userId: string, entries: WorkoutEntry[]): Promise<void> {
-  const db = await getDB();
-  const tx = db.transaction('workouts', 'readwrite');
-  await Promise.all(
-    entries.map((entry) => tx.store.put({ ...entry, userId }))
-  );
-  await tx.done;
+  const supabase = getSupabase();
+  
+  const rows = entries.map(entry => ({
+    user_id: userId,
+    date: entry.date,
+    exercise: entry.exercise,
+    category: entry.category,
+    sets: entry.sets,
+    reps: entry.reps,
+    weight: entry.weight,
+    duration: entry.duration,
+    distance: entry.distance,
+    calories_burned: entry.caloriesBurned,
+    notes: entry.notes,
+  }));
+
+  const { error } = await supabase.from('workouts').insert(rows);
+  if (error) throw error;
 }
 
 export async function getWorkoutsByDate(userId: string, date: string): Promise<WorkoutEntry[]> {
-  const db = await getDB();
-  const entries = await db.getAllFromIndex('workouts', 'by-user-date', [userId, date]);
-  return entries.map(({ userId: _, ...entry }) => entry as WorkoutEntry);
+  const supabase = getSupabase();
+  
+  const { data, error } = await supabase
+    .from('workouts')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('date', date)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data || []).map(mapWorkoutRow);
 }
 
 export async function getWorkoutsByDateRange(
@@ -146,28 +115,52 @@ export async function getWorkoutsByDateRange(
   startDate: string,
   endDate: string
 ): Promise<WorkoutEntry[]> {
-  const db = await getDB();
-  const allUserWorkouts = await db.getAllFromIndex('workouts', 'by-user', userId);
-  return allUserWorkouts
-    .filter((w) => w.date >= startDate && w.date <= endDate)
-    .map(({ userId: _, ...entry }) => entry as WorkoutEntry);
+  const supabase = getSupabase();
+  
+  const { data, error } = await supabase
+    .from('workouts')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('date', startDate)
+    .lte('date', endDate)
+    .order('date', { ascending: false });
+
+  if (error) throw error;
+  return (data || []).map(mapWorkoutRow);
 }
 
 export async function getAllWorkouts(userId: string): Promise<WorkoutEntry[]> {
-  const db = await getDB();
-  const entries = await db.getAllFromIndex('workouts', 'by-user', userId);
-  return entries.map(({ userId: _, ...entry }) => entry as WorkoutEntry);
+  const supabase = getSupabase();
+  
+  const { data, error } = await supabase
+    .from('workouts')
+    .select('*')
+    .eq('user_id', userId)
+    .order('date', { ascending: false });
+
+  if (error) throw error;
+  return (data || []).map(mapWorkoutRow);
 }
 
 export async function deleteWorkoutEntry(id: string): Promise<void> {
-  const db = await getDB();
-  await db.delete('workouts', id);
+  const supabase = getSupabase();
+  const { error } = await supabase.from('workouts').delete().eq('id', id);
+  if (error) throw error;
 }
 
-// Weight operations (user-scoped)
+// Weight operations
 export async function addWeightEntry(userId: string, entry: WeightEntry): Promise<void> {
-  const db = await getDB();
-  await db.put('weights', { ...entry, userId });
+  const supabase = getSupabase();
+  
+  const { error } = await supabase.from('weights').insert({
+    user_id: userId,
+    date: entry.date,
+    weight: entry.weight,
+    body_fat: entry.bodyFat,
+    notes: entry.notes,
+  });
+
+  if (error) throw error;
 }
 
 export async function getWeightsByDateRange(
@@ -175,39 +168,90 @@ export async function getWeightsByDateRange(
   startDate: string,
   endDate: string
 ): Promise<WeightEntry[]> {
-  const db = await getDB();
-  const allUserWeights = await db.getAllFromIndex('weights', 'by-user', userId);
-  return allUserWeights
-    .filter((w) => w.date >= startDate && w.date <= endDate)
-    .map(({ userId: _, ...entry }) => entry as WeightEntry);
+  const supabase = getSupabase();
+  
+  const { data, error } = await supabase
+    .from('weights')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('date', startDate)
+    .lte('date', endDate)
+    .order('date', { ascending: false });
+
+  if (error) throw error;
+  return (data || []).map(mapWeightRow);
 }
 
 export async function getAllWeights(userId: string): Promise<WeightEntry[]> {
-  const db = await getDB();
-  const entries = await db.getAllFromIndex('weights', 'by-user', userId);
-  return entries.map(({ userId: _, ...entry }) => entry as WeightEntry);
+  const supabase = getSupabase();
+  
+  const { data, error } = await supabase
+    .from('weights')
+    .select('*')
+    .eq('user_id', userId)
+    .order('date', { ascending: false });
+
+  if (error) throw error;
+  return (data || []).map(mapWeightRow);
 }
 
 export async function deleteWeightEntry(id: string): Promise<void> {
-  const db = await getDB();
-  await db.delete('weights', id);
+  const supabase = getSupabase();
+  const { error } = await supabase.from('weights').delete().eq('id', id);
+  if (error) throw error;
 }
 
 // Clear all data for a user
 export async function clearUserData(userId: string): Promise<void> {
-  const db = await getDB();
-  
-  const foods = await db.getAllFromIndex('foods', 'by-user', userId);
-  const workouts = await db.getAllFromIndex('workouts', 'by-user', userId);
-  const weights = await db.getAllFromIndex('weights', 'by-user', userId);
-
-  const tx = db.transaction(['foods', 'workouts', 'weights'], 'readwrite');
+  const supabase = getSupabase();
   
   await Promise.all([
-    ...foods.map((f) => tx.objectStore('foods').delete(f.id)),
-    ...workouts.map((w) => tx.objectStore('workouts').delete(w.id)),
-    ...weights.map((w) => tx.objectStore('weights').delete(w.id)),
+    supabase.from('foods').delete().eq('user_id', userId),
+    supabase.from('workouts').delete().eq('user_id', userId),
+    supabase.from('weights').delete().eq('user_id', userId),
   ]);
-  
-  await tx.done;
+}
+
+// Helper functions to map database rows to types
+function mapFoodRow(row: Record<string, unknown>): FoodEntry {
+  return {
+    id: row.id as string,
+    date: row.date as string,
+    name: row.name as string,
+    calories: row.calories as number,
+    protein: row.protein as number,
+    carbs: row.carbs as number,
+    fat: row.fat as number,
+    fiber: row.fiber as number | undefined,
+    sugar: row.sugar as number | undefined,
+    mealType: row.meal_type as FoodEntry['mealType'],
+    timestamp: row.created_at as string,
+  };
+}
+
+function mapWorkoutRow(row: Record<string, unknown>): WorkoutEntry {
+  return {
+    id: row.id as string,
+    date: row.date as string,
+    exercise: row.exercise as string,
+    category: row.category as WorkoutEntry['category'],
+    sets: row.sets as number | undefined,
+    reps: row.reps as number | undefined,
+    weight: row.weight as number | undefined,
+    duration: row.duration as number | undefined,
+    distance: row.distance as number | undefined,
+    caloriesBurned: row.calories_burned as number | undefined,
+    notes: row.notes as string | undefined,
+    timestamp: row.created_at as string,
+  };
+}
+
+function mapWeightRow(row: Record<string, unknown>): WeightEntry {
+  return {
+    id: row.id as string,
+    date: row.date as string,
+    weight: row.weight as number,
+    bodyFat: row.body_fat as number | undefined,
+    notes: row.notes as string | undefined,
+  };
 }
