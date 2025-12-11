@@ -3,12 +3,13 @@ export interface FoodEntry {
   id: string;
   date: string; // YYYY-MM-DD
   name: string;
-  calories: number;
-  protein: number; // grams
-  carbs: number; // grams
-  fat: number; // grams
-  fiber?: number; // grams
-  sugar?: number; // grams
+  calories: number; // calories per unit
+  protein: number; // grams per unit
+  carbs: number; // grams per unit
+  fat: number; // grams per unit
+  fiber?: number; // grams per unit
+  sugar?: number; // grams per unit
+  count: number; // number of servings/items (total = count * per unit values)
   mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   timestamp?: string;
 }

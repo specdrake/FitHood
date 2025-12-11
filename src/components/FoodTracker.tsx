@@ -13,7 +13,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { getAllFoods, deleteFoodEntry, addFoodEntries } from '@/lib/db';
+import { getAllFoods, deleteFoodEntry, addFoodEntries, updateFoodEntry } from '@/lib/db';
 import { FoodEntry, FoodContribution } from '@/lib/types';
 import { formatDisplayDate, formatDate, groupByDate, calculateFoodContributions } from '@/lib/utils';
 
@@ -24,23 +24,35 @@ interface FoodTrackerProps {
 
 const COLORS = ['#00ff88', '#ff6b6b', '#ffc93c', '#00d4ff', '#a855f7', '#f472b6', '#fb923c', '#34d399'];
 
+type FormState = {
+  name: string;
+  calories: string;
+  protein: string;
+  carbs: string;
+  fat: string;
+  count: string;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+};
+
+const emptyForm: FormState = {
+  name: '',
+  calories: '',
+  protein: '',
+  carbs: '',
+  fat: '',
+  count: '1',
+  mealType: 'snack',
+};
+
 export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps) {
   const [foods, setFoods] = useState<FoodEntry[]>([]);
   const [contributions, setContributions] = useState<FoodContribution[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
   const [viewMode, setViewMode] = useState<'daily' | 'all' | 'analysis'>('daily');
   const [isLoading, setIsLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
-  
-  // Form state
-  const [newFood, setNewFood] = useState({
-    name: '',
-    calories: '',
-    protein: '',
-    carbs: '',
-    fat: '',
-    mealType: 'snack' as 'breakfast' | 'lunch' | 'dinner' | 'snack',
-  });
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<FormState>(emptyForm);
 
   useEffect(() => {
     if (userId) {
@@ -69,25 +81,55 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
     }
   };
 
-  const handleAddFood = async (e: React.FormEvent) => {
+  const handleEdit = (food: FoodEntry) => {
+    setEditingId(food.id);
+    setFormData({
+      name: food.name,
+      calories: String(food.calories),
+      protein: String(food.protein),
+      carbs: String(food.carbs),
+      fat: String(food.fat),
+      count: String(food.count || 1),
+      mealType: food.mealType || 'snack',
+    });
+    setShowForm(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const entry: FoodEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    const foodData = {
       date: selectedDate,
-      name: newFood.name,
-      calories: parseFloat(newFood.calories) || 0,
-      protein: parseFloat(newFood.protein) || 0,
-      carbs: parseFloat(newFood.carbs) || 0,
-      fat: parseFloat(newFood.fat) || 0,
-      mealType: newFood.mealType,
-      timestamp: new Date().toISOString(),
+      name: formData.name,
+      calories: parseFloat(formData.calories) || 0,
+      protein: parseFloat(formData.protein) || 0,
+      carbs: parseFloat(formData.carbs) || 0,
+      fat: parseFloat(formData.fat) || 0,
+      count: parseInt(formData.count) || 1,
+      mealType: formData.mealType,
     };
 
-    await addFoodEntries(userId, [entry]);
-    setNewFood({ name: '', calories: '', protein: '', carbs: '', fat: '', mealType: 'snack' });
-    setShowAddForm(false);
+    if (editingId) {
+      await updateFoodEntry(editingId, foodData);
+    } else {
+      const entry: FoodEntry = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        ...foodData,
+        timestamp: new Date().toISOString(),
+      };
+      await addFoodEntries(userId, [entry]);
+    }
+
+    setFormData(emptyForm);
+    setShowForm(false);
+    setEditingId(null);
     loadData();
+  };
+
+  const handleCancel = () => {
+    setFormData(emptyForm);
+    setShowForm(false);
+    setEditingId(null);
   };
 
   const navigateDate = (days: number) => {
@@ -95,6 +137,12 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
     current.setDate(current.getDate() + days);
     setSelectedDate(formatDate(current));
   };
+
+  // Helper to calculate totals with count
+  const getTotalCalories = (food: FoodEntry) => food.calories * (food.count || 1);
+  const getTotalProtein = (food: FoodEntry) => food.protein * (food.count || 1);
+  const getTotalCarbs = (food: FoodEntry) => food.carbs * (food.count || 1);
+  const getTotalFat = (food: FoodEntry) => food.fat * (food.count || 1);
 
   const foodsByDate = groupByDate(foods);
   const dates = Array.from(foodsByDate.keys()).sort((a, b) => b.localeCompare(a));
@@ -105,8 +153,8 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
     return {
       date: formatDisplayDate(date),
       fullDate: date,
-      calories: dayFoods.reduce((sum, f) => sum + f.calories, 0),
-      protein: dayFoods.reduce((sum, f) => sum + f.protein, 0),
+      calories: dayFoods.reduce((sum, f) => sum + getTotalCalories(f), 0),
+      protein: dayFoods.reduce((sum, f) => sum + getTotalProtein(f), 0),
     };
   }).slice(0, 14).reverse();
 
@@ -172,80 +220,120 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
             </div>
           </div>
 
-          {/* Add Food Button & Form */}
+          {/* Add/Edit Food Form */}
           <div className="glass rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-lg flex items-center gap-2">
                 <span>🍽️</span> {formatDisplayDate(selectedDate)}
               </h3>
-              <button
-                onClick={() => setShowAddForm(!showAddForm)}
-                className="px-4 py-2 rounded-lg bg-gradient-to-r from-coral to-amber-glow text-midnight font-semibold hover:glow-sm transition-all text-sm"
-              >
-                {showAddForm ? 'Cancel' : '+ Add Food'}
-              </button>
+              {!showForm && (
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-coral to-amber-glow text-midnight font-semibold hover:glow-sm transition-all text-sm"
+                >
+                  + Add Food
+                </button>
+              )}
             </div>
 
-            {/* Add Food Form */}
-            {showAddForm && (
-              <form onSubmit={handleAddFood} className="mb-6 p-4 rounded-xl bg-white/5 animate-slide-up">
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
+            {/* Form */}
+            {showForm && (
+              <form onSubmit={handleSubmit} className="mb-6 p-4 rounded-xl bg-white/5 animate-slide-up">
+                <div className="grid grid-cols-2 md:grid-cols-7 gap-3 mb-4">
                   <div className="col-span-2">
+                    <label className="block text-xs text-gray-500 mb-1">Food name</label>
                     <input
                       type="text"
-                      value={newFood.name}
-                      onChange={(e) => setNewFood({ ...newFood, name: e.target.value })}
-                      placeholder="Food name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="e.g., Chicken breast"
                       className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
                       required
                     />
                   </div>
-                  <input
-                    type="number"
-                    value={newFood.calories}
-                    onChange={(e) => setNewFood({ ...newFood, calories: e.target.value })}
-                    placeholder="Calories"
-                    className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
-                    required
-                  />
-                  <input
-                    type="number"
-                    value={newFood.protein}
-                    onChange={(e) => setNewFood({ ...newFood, protein: e.target.value })}
-                    placeholder="Protein (g)"
-                    className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
-                  />
-                  <input
-                    type="number"
-                    value={newFood.carbs}
-                    onChange={(e) => setNewFood({ ...newFood, carbs: e.target.value })}
-                    placeholder="Carbs (g)"
-                    className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
-                  />
-                  <input
-                    type="number"
-                    value={newFood.fat}
-                    onChange={(e) => setNewFood({ ...newFood, fat: e.target.value })}
-                    placeholder="Fat (g)"
-                    className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
-                  />
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Count</label>
+                    <input
+                      type="number"
+                      value={formData.count}
+                      onChange={(e) => setFormData({ ...formData, count: e.target.value })}
+                      placeholder="1"
+                      min="1"
+                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Cal/unit</label>
+                    <input
+                      type="number"
+                      value={formData.calories}
+                      onChange={(e) => setFormData({ ...formData, calories: e.target.value })}
+                      placeholder="0"
+                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Protein (g)</label>
+                    <input
+                      type="number"
+                      value={formData.protein}
+                      onChange={(e) => setFormData({ ...formData, protein: e.target.value })}
+                      placeholder="0"
+                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Carbs (g)</label>
+                    <input
+                      type="number"
+                      value={formData.carbs}
+                      onChange={(e) => setFormData({ ...formData, carbs: e.target.value })}
+                      placeholder="0"
+                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Fat (g)</label>
+                    <input
+                      type="number"
+                      value={formData.fat}
+                      onChange={(e) => setFormData({ ...formData, fat: e.target.value })}
+                      placeholder="0"
+                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
+                    />
+                  </div>
                 </div>
+                {/* Show total preview */}
+                {(parseFloat(formData.calories) > 0 && parseInt(formData.count) > 1) && (
+                  <div className="mb-4 p-2 rounded-lg bg-electric/10 text-electric text-sm">
+                    Total: {(parseFloat(formData.calories) || 0) * (parseInt(formData.count) || 1)} cal 
+                    ({formData.count} × {formData.calories} cal)
+                  </div>
+                )}
                 <div className="flex gap-3 items-center">
                   <select
-                    value={newFood.mealType}
-                    onChange={(e) => setNewFood({ ...newFood, mealType: e.target.value as typeof newFood.mealType })}
+                    value={formData.mealType}
+                    onChange={(e) => setFormData({ ...formData, mealType: e.target.value as FormState['mealType'] })}
                     className="px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
                   >
-                    <option value="breakfast">Breakfast</option>
-                    <option value="lunch">Lunch</option>
-                    <option value="dinner">Dinner</option>
-                    <option value="snack">Snack</option>
+                    <option value="breakfast">🌅 Breakfast</option>
+                    <option value="lunch">☀️ Lunch</option>
+                    <option value="dinner">🌙 Dinner</option>
+                    <option value="snack">🍿 Snack</option>
                   </select>
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="px-4 py-2 rounded-lg border border-gray-600 text-gray-400 hover:bg-white/5 transition-all text-sm"
+                  >
+                    Cancel
+                  </button>
                   <button
                     type="submit"
                     className="flex-1 py-2 rounded-lg bg-coral text-midnight font-semibold hover:bg-coral/80 transition-all text-sm"
                   >
-                    Add Food
+                    {editingId ? 'Update' : 'Add'} Food
                   </button>
                 </div>
               </form>
@@ -260,7 +348,14 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                     className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all group"
                   >
                     <div className="flex-1">
-                      <p className="font-medium">{food.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{food.name}</p>
+                        {(food.count || 1) > 1 && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-electric/20 text-electric">
+                            ×{food.count}
+                          </span>
+                        )}
+                      </div>
                       {food.mealType && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-coral/20 text-coral capitalize">
                           {food.mealType}
@@ -268,13 +363,21 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                       )}
                     </div>
                     <div className="flex items-center gap-4 text-sm font-mono">
-                      <span className="text-electric">{food.calories} cal</span>
-                      <span className="text-coral">{food.protein}g P</span>
-                      <span className="text-amber-glow">{food.carbs}g C</span>
-                      <span className="text-neon-cyan">{food.fat}g F</span>
+                      <span className="text-electric">{getTotalCalories(food)} cal</span>
+                      <span className="text-coral">{getTotalProtein(food)}g P</span>
+                      <span className="text-amber-glow">{getTotalCarbs(food)}g C</span>
+                      <span className="text-neon-cyan">{getTotalFat(food)}g F</span>
+                      <button
+                        onClick={() => handleEdit(food)}
+                        className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-electric transition-all"
+                        title="Edit"
+                      >
+                        ✎
+                      </button>
                       <button
                         onClick={() => handleDelete(food.id)}
                         className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-coral transition-all"
+                        title="Delete"
                       >
                         ✕
                       </button>
@@ -287,16 +390,16 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                     <span>Day Total</span>
                     <div className="flex gap-4 font-mono">
                       <span className="text-electric">
-                        {selectedFoods.reduce((s, f) => s + f.calories, 0)} cal
+                        {selectedFoods.reduce((s, f) => s + getTotalCalories(f), 0)} cal
                       </span>
                       <span className="text-coral">
-                        {selectedFoods.reduce((s, f) => s + f.protein, 0)}g P
+                        {selectedFoods.reduce((s, f) => s + getTotalProtein(f), 0)}g P
                       </span>
                       <span className="text-amber-glow">
-                        {selectedFoods.reduce((s, f) => s + f.carbs, 0)}g C
+                        {selectedFoods.reduce((s, f) => s + getTotalCarbs(f), 0)}g C
                       </span>
                       <span className="text-neon-cyan">
-                        {selectedFoods.reduce((s, f) => s + f.fat, 0)}g F
+                        {selectedFoods.reduce((s, f) => s + getTotalFat(f), 0)}g F
                       </span>
                     </div>
                   </div>
@@ -450,7 +553,8 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                   <tr>
                     <th className="text-left py-3 px-2">Date</th>
                     <th className="text-left py-3 px-2">Food</th>
-                    <th className="text-right py-3 px-2">Calories</th>
+                    <th className="text-right py-3 px-2">Count</th>
+                    <th className="text-right py-3 px-2">Total Cal</th>
                     <th className="text-right py-3 px-2">Protein</th>
                     <th className="text-right py-3 px-2">Carbs</th>
                     <th className="text-right py-3 px-2">Fat</th>
@@ -459,17 +563,24 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                 </thead>
                 <tbody>
                   {foods.slice(0, 100).map((food) => (
-                    <tr key={food.id} className="border-b border-white/5 hover:bg-white/5">
+                    <tr key={food.id} className="border-b border-white/5 hover:bg-white/5 group">
                       <td className="py-3 px-2 text-gray-400">{formatDisplayDate(food.date)}</td>
                       <td className="py-3 px-2 font-medium">{food.name}</td>
-                      <td className="py-3 px-2 text-right text-electric font-mono">{food.calories}</td>
-                      <td className="py-3 px-2 text-right text-coral font-mono">{food.protein}g</td>
-                      <td className="py-3 px-2 text-right text-amber-glow font-mono">{food.carbs}g</td>
-                      <td className="py-3 px-2 text-right text-neon-cyan font-mono">{food.fat}g</td>
+                      <td className="py-3 px-2 text-right font-mono">{food.count || 1}</td>
+                      <td className="py-3 px-2 text-right text-electric font-mono">{getTotalCalories(food)}</td>
+                      <td className="py-3 px-2 text-right text-coral font-mono">{getTotalProtein(food)}g</td>
+                      <td className="py-3 px-2 text-right text-amber-glow font-mono">{getTotalCarbs(food)}g</td>
+                      <td className="py-3 px-2 text-right text-neon-cyan font-mono">{getTotalFat(food)}g</td>
                       <td className="py-3 px-2 text-right">
                         <button
+                          onClick={() => handleEdit(food)}
+                          className="text-gray-500 hover:text-electric transition-all mr-2 opacity-0 group-hover:opacity-100"
+                        >
+                          ✎
+                        </button>
+                        <button
                           onClick={() => handleDelete(food.id)}
-                          className="text-gray-500 hover:text-coral transition-all"
+                          className="text-gray-500 hover:text-coral transition-all opacity-0 group-hover:opacity-100"
                         >
                           ✕
                         </button>

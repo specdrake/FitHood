@@ -10,7 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { getAllWorkouts, deleteWorkoutEntry, addWorkoutEntries } from '@/lib/db';
+import { getAllWorkouts, deleteWorkoutEntry, addWorkoutEntries, updateWorkoutEntry } from '@/lib/db';
 import { WorkoutEntry } from '@/lib/types';
 import { formatDisplayDate, formatDate, groupByDate } from '@/lib/utils';
 
@@ -33,24 +33,38 @@ const CATEGORY_ICONS: Record<string, string> = {
   other: '⚡',
 };
 
+type FormState = {
+  exercise: string;
+  category: WorkoutEntry['category'];
+  sets: string;
+  reps: string;
+  weight: string;
+  duration: string;
+  distance: string;
+  caloriesBurned: string;
+  notes: string;
+};
+
+const emptyForm: FormState = {
+  exercise: '',
+  category: 'strength',
+  sets: '',
+  reps: '',
+  weight: '',
+  duration: '',
+  distance: '',
+  caloriesBurned: '',
+  notes: '',
+};
+
 export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTrackerProps) {
   const [workouts, setWorkouts] = useState<WorkoutEntry[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
   const [viewMode, setViewMode] = useState<'daily' | 'exercises' | 'all'>('daily');
   const [isLoading, setIsLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
-  
-  // Form state
-  const [newWorkout, setNewWorkout] = useState({
-    exercise: '',
-    category: 'strength' as WorkoutEntry['category'],
-    sets: '',
-    reps: '',
-    weight: '',
-    duration: '',
-    caloriesBurned: '',
-    notes: '',
-  });
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<FormState>(emptyForm);
 
   useEffect(() => {
     if (userId) {
@@ -78,36 +92,59 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
     }
   };
 
-  const handleAddWorkout = async (e: React.FormEvent) => {
+  const handleEdit = (workout: WorkoutEntry) => {
+    setEditingId(workout.id);
+    setFormData({
+      exercise: workout.exercise,
+      category: workout.category,
+      sets: workout.sets ? String(workout.sets) : '',
+      reps: workout.reps ? String(workout.reps) : '',
+      weight: workout.weight ? String(workout.weight) : '',
+      duration: workout.duration ? String(workout.duration) : '',
+      distance: workout.distance ? String(workout.distance) : '',
+      caloriesBurned: workout.caloriesBurned ? String(workout.caloriesBurned) : '',
+      notes: workout.notes || '',
+    });
+    setShowForm(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const entry: WorkoutEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    const workoutData = {
       date: selectedDate,
-      exercise: newWorkout.exercise,
-      category: newWorkout.category,
-      sets: newWorkout.sets ? parseInt(newWorkout.sets) : undefined,
-      reps: newWorkout.reps ? parseInt(newWorkout.reps) : undefined,
-      weight: newWorkout.weight ? parseFloat(newWorkout.weight) : undefined,
-      duration: newWorkout.duration ? parseInt(newWorkout.duration) : undefined,
-      caloriesBurned: newWorkout.caloriesBurned ? parseInt(newWorkout.caloriesBurned) : undefined,
-      notes: newWorkout.notes || undefined,
-      timestamp: new Date().toISOString(),
+      exercise: formData.exercise,
+      category: formData.category,
+      sets: formData.sets ? parseInt(formData.sets) : undefined,
+      reps: formData.reps ? parseInt(formData.reps) : undefined,
+      weight: formData.weight ? parseFloat(formData.weight) : undefined,
+      duration: formData.duration ? parseInt(formData.duration) : undefined,
+      distance: formData.distance ? parseFloat(formData.distance) : undefined,
+      caloriesBurned: formData.caloriesBurned ? parseInt(formData.caloriesBurned) : undefined,
+      notes: formData.notes || undefined,
     };
 
-    await addWorkoutEntries(userId, [entry]);
-    setNewWorkout({
-      exercise: '',
-      category: 'strength',
-      sets: '',
-      reps: '',
-      weight: '',
-      duration: '',
-      caloriesBurned: '',
-      notes: '',
-    });
-    setShowAddForm(false);
+    if (editingId) {
+      await updateWorkoutEntry(editingId, workoutData);
+    } else {
+      const entry: WorkoutEntry = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        ...workoutData,
+        timestamp: new Date().toISOString(),
+      };
+      await addWorkoutEntries(userId, [entry]);
+    }
+
+    setFormData(emptyForm);
+    setShowForm(false);
+    setEditingId(null);
     loadData();
+  };
+
+  const handleCancel = () => {
+    setFormData(emptyForm);
+    setShowForm(false);
+    setEditingId(null);
   };
 
   const navigateDate = (days: number) => {
@@ -120,13 +157,39 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
   const dates = Array.from(workoutsByDate.keys()).sort((a, b) => b.localeCompare(a));
   const selectedWorkouts = workoutsByDate.get(selectedDate) || [];
 
-  // Calculate exercise stats
-  const exerciseStats = new Map<string, { count: number; totalSets: number; maxWeight: number; category: string }>();
+  // Calculate exercise stats - only count non-zero values for averages
+  const exerciseStats = new Map<string, { 
+    count: number; 
+    totalSets: number; 
+    setsCount: number;
+    maxWeight: number; 
+    totalDistance: number;
+    distanceCount: number;
+    category: string 
+  }>();
+  
   workouts.forEach((w) => {
-    const existing = exerciseStats.get(w.exercise) || { count: 0, totalSets: 0, maxWeight: 0, category: w.category };
+    const existing = exerciseStats.get(w.exercise) || { 
+      count: 0, 
+      totalSets: 0, 
+      setsCount: 0,
+      maxWeight: 0, 
+      totalDistance: 0,
+      distanceCount: 0,
+      category: w.category 
+    };
     existing.count += 1;
-    existing.totalSets += w.sets || 0;
-    existing.maxWeight = Math.max(existing.maxWeight, w.weight || 0);
+    if (w.sets && w.sets > 0) {
+      existing.totalSets += w.sets;
+      existing.setsCount += 1;
+    }
+    if (w.weight && w.weight > 0) {
+      existing.maxWeight = Math.max(existing.maxWeight, w.weight);
+    }
+    if (w.distance && w.distance > 0) {
+      existing.totalDistance += w.distance;
+      existing.distanceCount += 1;
+    }
     exerciseStats.set(w.exercise, existing);
   });
 
@@ -140,21 +203,35 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
       strength: dayWorkouts.filter((w) => w.category === 'strength').length,
       cardio: dayWorkouts.filter((w) => w.category === 'cardio').length,
       calories: dayWorkouts.reduce((sum, w) => sum + (w.caloriesBurned || 0), 0),
+      distance: dayWorkouts.reduce((sum, w) => sum + (w.distance || 0), 0),
     };
   }).reverse();
 
-  // Category breakdown
-  const categoryBreakdown = ['strength', 'cardio', 'flexibility', 'other'].map((cat) => ({
-    category: cat,
-    count: workouts.filter((w) => w.category === cat).length,
-    totalCalories: workouts.filter((w) => w.category === cat).reduce((sum, w) => sum + (w.caloriesBurned || 0), 0),
-    color: CATEGORY_COLORS[cat],
-    icon: CATEGORY_ICONS[cat],
-  }));
+  // Category breakdown - only count non-zero values
+  const categoryBreakdown = ['strength', 'cardio', 'flexibility', 'other'].map((cat) => {
+    const catWorkouts = workouts.filter((w) => w.category === cat);
+    const withCalories = catWorkouts.filter(w => w.caloriesBurned && w.caloriesBurned > 0);
+    const withDistance = catWorkouts.filter(w => w.distance && w.distance > 0);
+    return {
+      category: cat,
+      count: catWorkouts.length,
+      totalCalories: catWorkouts.reduce((sum, w) => sum + (w.caloriesBurned || 0), 0),
+      avgCalories: withCalories.length > 0 
+        ? Math.round(withCalories.reduce((sum, w) => sum + (w.caloriesBurned || 0), 0) / withCalories.length)
+        : 0,
+      totalDistance: catWorkouts.reduce((sum, w) => sum + (w.distance || 0), 0),
+      avgDistance: withDistance.length > 0
+        ? (withDistance.reduce((sum, w) => sum + (w.distance || 0), 0) / withDistance.length).toFixed(1)
+        : 0,
+      color: CATEGORY_COLORS[cat],
+      icon: CATEGORY_ICONS[cat],
+    };
+  });
 
   // Daily stats
   const dayCaloriesBurned = selectedWorkouts.reduce((sum, w) => sum + (w.caloriesBurned || 0), 0);
   const dayTotalSets = selectedWorkouts.reduce((sum, w) => sum + (w.sets || 0), 0);
+  const dayTotalDistance = selectedWorkouts.reduce((sum, w) => sum + (w.distance || 0), 0);
 
   if (isLoading) {
     return (
@@ -202,11 +279,14 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
                 <p className="text-3xl font-bold font-mono" style={{ color: cat.color }}>
                   {cat.count}
                 </p>
-                {cat.totalCalories > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    🔥 {cat.totalCalories} cal burned
-                  </p>
-                )}
+                <div className="text-xs text-gray-500 mt-1 space-y-0.5">
+                  {cat.totalCalories > 0 && (
+                    <p>🔥 {cat.totalCalories} cal total</p>
+                  )}
+                  {cat.totalDistance > 0 && (
+                    <p>📍 {cat.totalDistance.toFixed(1)} km total</p>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -238,100 +318,140 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
             </div>
           </div>
 
-          {/* Add Workout & List */}
+          {/* Add/Edit Workout Form */}
           <div className="glass rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                   <span>🏋️</span> {formatDisplayDate(selectedDate)}
                 </h3>
-                {dayCaloriesBurned > 0 && (
-                  <p className="text-sm text-coral">
-                    🔥 {dayCaloriesBurned} calories burned • {dayTotalSets} total sets
-                  </p>
-                )}
+                <div className="text-sm text-gray-400 mt-1 space-x-4">
+                  {dayCaloriesBurned > 0 && <span>🔥 {dayCaloriesBurned} cal</span>}
+                  {dayTotalSets > 0 && <span>💪 {dayTotalSets} sets</span>}
+                  {dayTotalDistance > 0 && <span>📍 {dayTotalDistance.toFixed(1)} km</span>}
+                </div>
               </div>
-              <button
-                onClick={() => setShowAddForm(!showAddForm)}
-                className="px-4 py-2 rounded-lg bg-gradient-to-r from-neon-cyan to-electric text-midnight font-semibold hover:glow-sm transition-all text-sm"
-              >
-                {showAddForm ? 'Cancel' : '+ Add Workout'}
-              </button>
+              {!showForm && (
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-neon-cyan to-electric text-midnight font-semibold hover:glow-sm transition-all text-sm"
+                >
+                  + Add Workout
+                </button>
+              )}
             </div>
 
-            {/* Add Workout Form */}
-            {showAddForm && (
-              <form onSubmit={handleAddWorkout} className="mb-6 p-4 rounded-xl bg-white/5 animate-slide-up">
+            {/* Form */}
+            {showForm && (
+              <form onSubmit={handleSubmit} className="mb-6 p-4 rounded-xl bg-white/5 animate-slide-up">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                   <div className="col-span-2">
+                    <label className="block text-xs text-gray-500 mb-1">Exercise</label>
                     <input
                       type="text"
-                      value={newWorkout.exercise}
-                      onChange={(e) => setNewWorkout({ ...newWorkout, exercise: e.target.value })}
-                      placeholder="Exercise name"
+                      value={formData.exercise}
+                      onChange={(e) => setFormData({ ...formData, exercise: e.target.value })}
+                      placeholder="e.g., Bench Press, Walking"
                       className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
                       required
                     />
                   </div>
-                  <select
-                    value={newWorkout.category}
-                    onChange={(e) => setNewWorkout({ ...newWorkout, category: e.target.value as WorkoutEntry['category'] })}
-                    className="px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
-                  >
-                    <option value="strength">🏋️ Strength</option>
-                    <option value="cardio">🏃 Cardio</option>
-                    <option value="flexibility">🧘 Flexibility</option>
-                    <option value="other">⚡ Other</option>
-                  </select>
-                  <input
-                    type="number"
-                    value={newWorkout.sets}
-                    onChange={(e) => setNewWorkout({ ...newWorkout, sets: e.target.value })}
-                    placeholder="Sets"
-                    className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
-                  />
-                  <input
-                    type="number"
-                    value={newWorkout.reps}
-                    onChange={(e) => setNewWorkout({ ...newWorkout, reps: e.target.value })}
-                    placeholder="Reps"
-                    className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
-                  />
-                  <input
-                    type="number"
-                    value={newWorkout.weight}
-                    onChange={(e) => setNewWorkout({ ...newWorkout, weight: e.target.value })}
-                    placeholder="Weight (kg)"
-                    className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
-                  />
-                  <input
-                    type="number"
-                    value={newWorkout.duration}
-                    onChange={(e) => setNewWorkout({ ...newWorkout, duration: e.target.value })}
-                    placeholder="Duration (min)"
-                    className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
-                  />
-                  <input
-                    type="number"
-                    value={newWorkout.caloriesBurned}
-                    onChange={(e) => setNewWorkout({ ...newWorkout, caloriesBurned: e.target.value })}
-                    placeholder="🔥 Calories burned"
-                    className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
-                  />
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Category</label>
+                    <select
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value as WorkoutEntry['category'] })}
+                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
+                    >
+                      <option value="strength">🏋️ Strength</option>
+                      <option value="cardio">🏃 Cardio</option>
+                      <option value="flexibility">🧘 Flexibility</option>
+                      <option value="other">⚡ Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Sets</label>
+                    <input
+                      type="number"
+                      value={formData.sets}
+                      onChange={(e) => setFormData({ ...formData, sets: e.target.value })}
+                      placeholder="0"
+                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Reps</label>
+                    <input
+                      type="number"
+                      value={formData.reps}
+                      onChange={(e) => setFormData({ ...formData, reps: e.target.value })}
+                      placeholder="0"
+                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Weight (kg)</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={formData.weight}
+                      onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                      placeholder="0"
+                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Duration (min)</label>
+                    <input
+                      type="number"
+                      value={formData.duration}
+                      onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                      placeholder="0"
+                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Distance (km)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={formData.distance}
+                      onChange={(e) => setFormData({ ...formData, distance: e.target.value })}
+                      placeholder="0"
+                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-purple-400 focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">🔥 Calories</label>
+                    <input
+                      type="number"
+                      value={formData.caloriesBurned}
+                      onChange={(e) => setFormData({ ...formData, caloriesBurned: e.target.value })}
+                      placeholder="0"
+                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-3">
                   <input
                     type="text"
-                    value={newWorkout.notes}
-                    onChange={(e) => setNewWorkout({ ...newWorkout, notes: e.target.value })}
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     placeholder="Notes (optional)"
                     className="flex-1 px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
                   />
                   <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="px-4 py-2 rounded-lg border border-gray-600 text-gray-400 hover:bg-white/5 transition-all text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
                     type="submit"
                     className="px-6 py-2 rounded-lg bg-neon-cyan text-midnight font-semibold hover:bg-neon-cyan/80 transition-all text-sm"
                   >
-                    Add
+                    {editingId ? 'Update' : 'Add'}
                   </button>
                 </div>
               </form>
@@ -349,7 +469,7 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
                       <span className="text-2xl">{CATEGORY_ICONS[workout.category]}</span>
                       <div>
                         <p className="font-medium">{workout.exercise}</p>
-                        <div className="flex gap-2 items-center">
+                        <div className="flex gap-2 items-center flex-wrap">
                           <span
                             className="text-xs px-2 py-0.5 rounded-full capitalize"
                             style={{ 
@@ -365,25 +485,36 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 text-sm font-mono">
-                      {workout.sets && (
+                    <div className="flex items-center gap-3 text-sm font-mono flex-wrap justify-end">
+                      {workout.sets && workout.sets > 0 && (
                         <span className="text-electric">{workout.sets} sets</span>
                       )}
-                      {workout.reps && (
+                      {workout.reps && workout.reps > 0 && (
                         <span className="text-amber-glow">{workout.reps} reps</span>
                       )}
-                      {workout.weight && (
+                      {workout.weight && workout.weight > 0 && (
                         <span className="text-neon-cyan">{workout.weight} kg</span>
                       )}
-                      {workout.duration && (
+                      {workout.duration && workout.duration > 0 && (
                         <span className="text-purple-400">{workout.duration} min</span>
                       )}
-                      {workout.caloriesBurned && (
+                      {workout.distance && workout.distance > 0 && (
+                        <span className="text-pink-400">📍 {workout.distance} km</span>
+                      )}
+                      {workout.caloriesBurned && workout.caloriesBurned > 0 && (
                         <span className="text-coral">🔥 {workout.caloriesBurned}</span>
                       )}
                       <button
+                        onClick={() => handleEdit(workout)}
+                        className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-electric transition-all ml-2"
+                        title="Edit"
+                      >
+                        ✎
+                      </button>
+                      <button
                         onClick={() => handleDelete(workout.id)}
                         className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-coral transition-all"
+                        title="Delete"
                       >
                         ✕
                       </button>
@@ -403,7 +534,7 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
           {/* Daily Chart */}
           {dailyWorkouts.length > 0 && (
             <div className="glass rounded-2xl p-6">
-              <h3 className="font-semibold text-lg mb-4">📊 Workout Frequency & Calories Burned</h3>
+              <h3 className="font-semibold text-lg mb-4">📊 Workout Frequency & Calories</h3>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={dailyWorkouts}>
@@ -415,6 +546,11 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
                         background: 'rgba(15, 15, 26, 0.95)',
                         border: '1px solid rgba(0, 212, 255, 0.3)',
                         borderRadius: '8px',
+                      }}
+                      formatter={(value: number, name: string) => {
+                        if (name === 'distance') return [`${value.toFixed(1)} km`, 'Distance'];
+                        if (name === 'calories') return [`${value} cal`, 'Calories'];
+                        return [value, name];
                       }}
                     />
                     <Bar
@@ -464,14 +600,26 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
                         <p className="text-xl font-bold text-electric font-mono">{stats.count}</p>
                         <p className="text-xs text-gray-500">times</p>
                       </div>
-                      <div>
-                        <p className="text-xl font-bold text-coral font-mono">{stats.totalSets}</p>
-                        <p className="text-xs text-gray-500">total sets</p>
-                      </div>
+                      {stats.setsCount > 0 && (
+                        <div>
+                          <p className="text-xl font-bold text-coral font-mono">
+                            {Math.round(stats.totalSets / stats.setsCount)}
+                          </p>
+                          <p className="text-xs text-gray-500">avg sets</p>
+                        </div>
+                      )}
                       {stats.maxWeight > 0 && (
                         <div>
                           <p className="text-xl font-bold text-amber-glow font-mono">{stats.maxWeight}</p>
                           <p className="text-xs text-gray-500">max kg</p>
+                        </div>
+                      )}
+                      {stats.distanceCount > 0 && (
+                        <div>
+                          <p className="text-xl font-bold text-pink-400 font-mono">
+                            {(stats.totalDistance / stats.distanceCount).toFixed(1)}
+                          </p>
+                          <p className="text-xs text-gray-500">avg km</p>
                         </div>
                       )}
                     </div>
@@ -503,13 +651,14 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
                     <th className="text-right py-3 px-2">Reps</th>
                     <th className="text-right py-3 px-2">Weight</th>
                     <th className="text-right py-3 px-2">Duration</th>
+                    <th className="text-right py-3 px-2">Distance</th>
                     <th className="text-right py-3 px-2">🔥 Cal</th>
                     <th className="py-3 px-2"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {workouts.slice(0, 100).map((workout) => (
-                    <tr key={workout.id} className="border-b border-white/5 hover:bg-white/5">
+                    <tr key={workout.id} className="border-b border-white/5 hover:bg-white/5 group">
                       <td className="py-3 px-2 text-gray-400">{formatDisplayDate(workout.date)}</td>
                       <td className="py-3 px-2 font-medium">{workout.exercise}</td>
                       <td className="py-3 px-2">
@@ -531,13 +680,22 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
                       <td className="py-3 px-2 text-right font-mono">
                         {workout.duration ? `${workout.duration}m` : '-'}
                       </td>
+                      <td className="py-3 px-2 text-right font-mono text-pink-400">
+                        {workout.distance ? `${workout.distance}km` : '-'}
+                      </td>
                       <td className="py-3 px-2 text-right font-mono text-coral">
                         {workout.caloriesBurned || '-'}
                       </td>
                       <td className="py-3 px-2 text-right">
                         <button
+                          onClick={() => handleEdit(workout)}
+                          className="text-gray-500 hover:text-electric transition-all mr-2 opacity-0 group-hover:opacity-100"
+                        >
+                          ✎
+                        </button>
+                        <button
                           onClick={() => handleDelete(workout.id)}
-                          className="text-gray-500 hover:text-coral transition-all"
+                          className="text-gray-500 hover:text-coral transition-all opacity-0 group-hover:opacity-100"
                         >
                           ✕
                         </button>

@@ -15,10 +15,30 @@ export async function addFoodEntries(userId: string, entries: FoodEntry[]): Prom
     fat: entry.fat,
     fiber: entry.fiber,
     sugar: entry.sugar,
+    count: entry.count || 1,
     meal_type: entry.mealType,
   }));
 
   const { error } = await supabase.from('foods').insert(rows);
+  if (error) throw error;
+}
+
+export async function updateFoodEntry(id: string, entry: Partial<FoodEntry>): Promise<void> {
+  const supabase = getSupabase();
+  
+  const updates: Record<string, unknown> = {};
+  if (entry.date !== undefined) updates.date = entry.date;
+  if (entry.name !== undefined) updates.name = entry.name;
+  if (entry.calories !== undefined) updates.calories = entry.calories;
+  if (entry.protein !== undefined) updates.protein = entry.protein;
+  if (entry.carbs !== undefined) updates.carbs = entry.carbs;
+  if (entry.fat !== undefined) updates.fat = entry.fat;
+  if (entry.fiber !== undefined) updates.fiber = entry.fiber;
+  if (entry.sugar !== undefined) updates.sugar = entry.sugar;
+  if (entry.count !== undefined) updates.count = entry.count;
+  if (entry.mealType !== undefined) updates.meal_type = entry.mealType;
+
+  const { error } = await supabase.from('foods').update(updates).eq('id', id);
   if (error) throw error;
 }
 
@@ -148,6 +168,25 @@ export async function deleteWorkoutEntry(id: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function updateWorkoutEntry(id: string, entry: Partial<WorkoutEntry>): Promise<void> {
+  const supabase = getSupabase();
+  
+  const updates: Record<string, unknown> = {};
+  if (entry.date !== undefined) updates.date = entry.date;
+  if (entry.exercise !== undefined) updates.exercise = entry.exercise;
+  if (entry.category !== undefined) updates.category = entry.category;
+  if (entry.sets !== undefined) updates.sets = entry.sets;
+  if (entry.reps !== undefined) updates.reps = entry.reps;
+  if (entry.weight !== undefined) updates.weight = entry.weight;
+  if (entry.duration !== undefined) updates.duration = entry.duration;
+  if (entry.distance !== undefined) updates.distance = entry.distance;
+  if (entry.caloriesBurned !== undefined) updates.calories_burned = entry.caloriesBurned;
+  if (entry.notes !== undefined) updates.notes = entry.notes;
+
+  const { error } = await supabase.from('workouts').update(updates).eq('id', id);
+  if (error) throw error;
+}
+
 // Weight operations
 export async function addWeightEntry(userId: string, entry: WeightEntry): Promise<void> {
   const supabase = getSupabase();
@@ -224,6 +263,7 @@ function mapFoodRow(row: Record<string, unknown>): FoodEntry {
     fat: row.fat as number,
     fiber: row.fiber as number | undefined,
     sugar: row.sugar as number | undefined,
+    count: (row.count as number) || 1,
     mealType: row.meal_type as FoodEntry['mealType'],
     timestamp: row.created_at as string,
   };

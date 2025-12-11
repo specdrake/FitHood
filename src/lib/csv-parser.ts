@@ -72,6 +72,7 @@ export function parseFoodCSV(csvContent: string): FoodEntry[] {
     const fatValue = findValue(['fat', 'fats', 'lipids', 'lipid']);
     const fiberValue = findValue(['fiber', 'fibre', 'dietary fiber']);
     const sugarValue = findValue(['sugar', 'sugars']);
+    const countValue = findValue(['count', 'quantity', 'qty', 'servings', 'serving']);
     const mealValue = findValue(['meal', 'mealtype', 'type', 'category']);
 
     const mealType = String(mealValue || '').toLowerCase();
@@ -91,6 +92,7 @@ export function parseFoodCSV(csvContent: string): FoodEntry[] {
       fat: parseNumber(fatValue),
       fiber: fiberValue !== undefined ? parseNumber(fiberValue) : undefined,
       sugar: sugarValue !== undefined ? parseNumber(sugarValue) : undefined,
+      count: countValue !== undefined ? Math.max(1, parseNumber(countValue)) : 1,
       mealType: normalizedMealType,
       timestamp: new Date().toISOString(),
     };

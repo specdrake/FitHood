@@ -40,13 +40,16 @@ export function calculateDailySummary(
   workouts: WorkoutEntry[],
   weight?: number
 ): DailySummary {
+  // Calculate totals with count multiplier
+  const getTotal = (f: FoodEntry, val: number) => val * (f.count || 1);
+  
   return {
     date,
-    totalCalories: foods.reduce((sum, f) => sum + f.calories, 0),
-    totalProtein: foods.reduce((sum, f) => sum + f.protein, 0),
-    totalCarbs: foods.reduce((sum, f) => sum + f.carbs, 0),
-    totalFat: foods.reduce((sum, f) => sum + f.fat, 0),
-    totalFiber: foods.reduce((sum, f) => sum + (f.fiber || 0), 0),
+    totalCalories: foods.reduce((sum, f) => sum + getTotal(f, f.calories), 0),
+    totalProtein: foods.reduce((sum, f) => sum + getTotal(f, f.protein), 0),
+    totalCarbs: foods.reduce((sum, f) => sum + getTotal(f, f.carbs), 0),
+    totalFat: foods.reduce((sum, f) => sum + getTotal(f, f.fat), 0),
+    totalFiber: foods.reduce((sum, f) => sum + getTotal(f, f.fiber || 0), 0),
     foodEntries: foods,
     workoutEntries: workouts,
     weight,
@@ -54,7 +57,11 @@ export function calculateDailySummary(
 }
 
 export function calculateFoodContributions(foods: FoodEntry[]): FoodContribution[] {
-  const totalCalories = foods.reduce((sum, f) => sum + f.calories, 0);
+  // Helper to get total with count multiplier
+  const getTotalCals = (f: FoodEntry) => f.calories * (f.count || 1);
+  const getTotalProt = (f: FoodEntry) => f.protein * (f.count || 1);
+  
+  const totalCalories = foods.reduce((sum, f) => sum + getTotalCals(f), 0);
   
   const grouped = new Map<string, FoodEntry[]>();
   foods.forEach((food) => {
@@ -65,16 +72,19 @@ export function calculateFoodContributions(foods: FoodEntry[]): FoodContribution
   });
 
   const contributions: FoodContribution[] = [];
-  grouped.forEach((entries, name) => {
-    const totalCals = entries.reduce((sum, f) => sum + f.calories, 0);
-    const totalProt = entries.reduce((sum, f) => sum + f.protein, 0);
+  grouped.forEach((entries) => {
+    const totalCals = entries.reduce((sum, f) => sum + getTotalCals(f), 0);
+    const totalProt = entries.reduce((sum, f) => sum + getTotalProt(f), 0);
+    // Count total servings (sum of counts)
+    const totalCount = entries.reduce((sum, f) => sum + (f.count || 1), 0);
+    
     contributions.push({
       name: entries[0].name, // Use original casing
       totalCalories: totalCals,
       totalProtein: totalProt,
-      count: entries.length,
-      avgCalories: Math.round(totalCals / entries.length),
-      avgProtein: Math.round(totalProt / entries.length),
+      count: totalCount, // Total servings across all entries
+      avgCalories: totalCount > 0 ? Math.round(totalCals / totalCount) : 0,
+      avgProtein: totalCount > 0 ? Math.round(totalProt / totalCount) : 0,
       percentOfTotal: totalCalories > 0 ? (totalCals / totalCalories) * 100 : 0,
     });
   });
