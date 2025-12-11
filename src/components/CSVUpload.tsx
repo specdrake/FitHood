@@ -6,10 +6,11 @@ import { addFoodEntries, addWorkoutEntries } from '@/lib/db';
 import { FoodEntry, WorkoutEntry } from '@/lib/types';
 
 interface CSVUploadProps {
+  userId: string;
   onUploadComplete: () => void;
 }
 
-export default function CSVUpload({ onUploadComplete }: CSVUploadProps) {
+export default function CSVUpload({ userId, onUploadComplete }: CSVUploadProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [preview, setPreview] = useState<{ type: 'food' | 'workout'; data: FoodEntry[] | WorkoutEntry[] } | null>(null);
@@ -49,10 +50,10 @@ export default function CSVUpload({ onUploadComplete }: CSVUploadProps) {
     setIsLoading(true);
     try {
       if (preview.type === 'food') {
-        await addFoodEntries(preview.data as FoodEntry[]);
+        await addFoodEntries(userId, preview.data as FoodEntry[]);
         setMessage({ type: 'success', text: `Added ${preview.data.length} food entries!` });
       } else {
-        await addWorkoutEntries(preview.data as WorkoutEntry[]);
+        await addWorkoutEntries(userId, preview.data as WorkoutEntry[]);
         setMessage({ type: 'success', text: `Added ${preview.data.length} workout entries!` });
       }
       setPreview(null);
@@ -265,4 +266,3 @@ export default function CSVUpload({ onUploadComplete }: CSVUploadProps) {
     </div>
   );
 }
-

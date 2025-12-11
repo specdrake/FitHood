@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from 'next'
+import { Analytics } from '@vercel/analytics/next'
+import AuthProvider from '@/components/AuthProvider'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -32,7 +34,10 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
       <body className="antialiased">
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+        <Analytics />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -48,4 +53,3 @@ export default function RootLayout({
     </html>
   )
 }
-
