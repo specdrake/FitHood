@@ -18,6 +18,11 @@ export default function Settings({ userId, userName }: SettingsProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
+  // Date range for export
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
+  const [useDateRange, setUseDateRange] = useState(false);
+  
   // Data counts for export
   const [dataCounts, setDataCounts] = useState({ foods: 0, workouts: 0, weights: 0 });
   const [allData, setAllData] = useState<{
@@ -28,6 +33,12 @@ export default function Settings({ userId, userName }: SettingsProps) {
 
   useEffect(() => {
     loadDataCounts();
+    // Set default date range to last 30 days
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    setExportEndDate(today.toISOString().split('T')[0]);
+    setExportStartDate(thirtyDaysAgo.toISOString().split('T')[0]);
   }, [userId]);
 
   const loadDataCounts = async () => {
@@ -46,6 +57,28 @@ export default function Settings({ userId, userName }: SettingsProps) {
     } catch (error) {
       console.error('Failed to load data counts:', error);
     }
+  };
+
+  // Filter data by date range
+  const getFilteredData = () => {
+    if (!useDateRange || !exportStartDate || !exportEndDate) {
+      return allData;
+    }
+    return {
+      foods: allData.foods.filter(f => f.date >= exportStartDate && f.date <= exportEndDate),
+      workouts: allData.workouts.filter(w => w.date >= exportStartDate && w.date <= exportEndDate),
+      weights: allData.weights.filter(w => w.date >= exportStartDate && w.date <= exportEndDate),
+    };
+  };
+
+  const getFilteredCounts = () => {
+    const filtered = getFilteredData();
+    return {
+      foods: filtered.foods.length,
+      workouts: filtered.workouts.length,
+      weights: filtered.weights.length,
+      total: filtered.foods.length + filtered.workouts.length + filtered.weights.length,
+    };
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -82,29 +115,34 @@ export default function Settings({ userId, userName }: SettingsProps) {
   };
 
   const handleExportFoods = () => {
-    if (allData.foods.length > 0) {
-      exportFoodsToCSV(allData.foods);
-      setMessage({ type: 'success', text: 'Food data exported!' });
+    const filtered = getFilteredData();
+    if (filtered.foods.length > 0) {
+      exportFoodsToCSV(filtered.foods);
+      setMessage({ type: 'success', text: `Exported ${filtered.foods.length} food entries!` });
     }
   };
 
   const handleExportWorkouts = () => {
-    if (allData.workouts.length > 0) {
-      exportWorkoutsToCSV(allData.workouts);
-      setMessage({ type: 'success', text: 'Workout data exported!' });
+    const filtered = getFilteredData();
+    if (filtered.workouts.length > 0) {
+      exportWorkoutsToCSV(filtered.workouts);
+      setMessage({ type: 'success', text: `Exported ${filtered.workouts.length} workout entries!` });
     }
   };
 
   const handleExportWeights = () => {
-    if (allData.weights.length > 0) {
-      exportWeightsToCSV(allData.weights);
-      setMessage({ type: 'success', text: 'Weight data exported!' });
+    const filtered = getFilteredData();
+    if (filtered.weights.length > 0) {
+      exportWeightsToCSV(filtered.weights);
+      setMessage({ type: 'success', text: `Exported ${filtered.weights.length} weight entries!` });
     }
   };
 
   const handleExportAll = () => {
-    exportAllDataToCSV(allData.foods, allData.workouts, allData.weights);
-    setMessage({ type: 'success', text: 'All data exported!' });
+    const filtered = getFilteredData();
+    exportAllDataToCSV(filtered.foods, filtered.workouts, filtered.weights);
+    const total = filtered.foods.length + filtered.workouts.length + filtered.weights.length;
+    setMessage({ type: 'success', text: `Exported ${total} total entries!` });
   };
 
   const handleClearData = async () => {
@@ -129,6 +167,7 @@ export default function Settings({ userId, userName }: SettingsProps) {
   };
 
   const totalEntries = dataCounts.foods + dataCounts.workouts + dataCounts.weights;
+  const filteredCounts = getFilteredCounts();
 
   return (
     <div className="space-y-6 animate-fade-in pb-24 md:pb-8">
@@ -176,45 +215,92 @@ export default function Settings({ userId, userName }: SettingsProps) {
           Download your data as CSV files. Total: {totalEntries} entries
         </p>
         
+        {/* Date Range Filter */}
+        <div className="mb-4 p-4 rounded-xl bg-midnight/50 border border-white/10">
+          <label className="flex items-center gap-3 cursor-pointer mb-3">
+            <input
+              type="checkbox"
+              checked={useDateRange}
+              onChange={(e) => setUseDateRange(e.target.checked)}
+              className="w-5 h-5 rounded border-gray-600 bg-midnight text-electric focus:ring-electric"
+            />
+            <span className="text-sm font-medium">Filter by date range</span>
+          </label>
+          
+          {useDateRange && (
+            <div className="grid grid-cols-2 gap-3 animate-fade-in">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">From</label>
+                <input
+                  type="date"
+                  value={exportStartDate}
+                  onChange={(e) => setExportStartDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-electric focus:outline-none text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">To</label>
+                <input
+                  type="date"
+                  value={exportEndDate}
+                  onChange={(e) => setExportEndDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-electric focus:outline-none text-sm"
+                />
+              </div>
+              <p className="col-span-2 text-xs text-gray-500">
+                {filteredCounts.total} entries in selected range
+              </p>
+            </div>
+          )}
+        </div>
+        
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <button
             onClick={handleExportFoods}
-            disabled={dataCounts.foods === 0}
+            disabled={useDateRange ? filteredCounts.foods === 0 : dataCounts.foods === 0}
             className="p-4 rounded-xl bg-white/5 hover:bg-coral/20 border border-transparent hover:border-coral/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="text-2xl">🍎</span>
             <p className="text-sm font-medium mt-2">Food</p>
-            <p className="text-xs text-gray-500">{dataCounts.foods} entries</p>
+            <p className="text-xs text-gray-500">
+              {useDateRange ? filteredCounts.foods : dataCounts.foods} entries
+            </p>
           </button>
           
           <button
             onClick={handleExportWorkouts}
-            disabled={dataCounts.workouts === 0}
+            disabled={useDateRange ? filteredCounts.workouts === 0 : dataCounts.workouts === 0}
             className="p-4 rounded-xl bg-white/5 hover:bg-neon-cyan/20 border border-transparent hover:border-neon-cyan/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="text-2xl">💪</span>
             <p className="text-sm font-medium mt-2">Workouts</p>
-            <p className="text-xs text-gray-500">{dataCounts.workouts} entries</p>
+            <p className="text-xs text-gray-500">
+              {useDateRange ? filteredCounts.workouts : dataCounts.workouts} entries
+            </p>
           </button>
           
           <button
             onClick={handleExportWeights}
-            disabled={dataCounts.weights === 0}
+            disabled={useDateRange ? filteredCounts.weights === 0 : dataCounts.weights === 0}
             className="p-4 rounded-xl bg-white/5 hover:bg-amber-glow/20 border border-transparent hover:border-amber-glow/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="text-2xl">⚖️</span>
             <p className="text-sm font-medium mt-2">Weight</p>
-            <p className="text-xs text-gray-500">{dataCounts.weights} entries</p>
+            <p className="text-xs text-gray-500">
+              {useDateRange ? filteredCounts.weights : dataCounts.weights} entries
+            </p>
           </button>
           
           <button
             onClick={handleExportAll}
-            disabled={totalEntries === 0}
+            disabled={useDateRange ? filteredCounts.total === 0 : totalEntries === 0}
             className="p-4 rounded-xl bg-gradient-to-br from-electric/20 to-neon-cyan/20 hover:from-electric/30 hover:to-neon-cyan/30 border border-electric/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="text-2xl">📦</span>
             <p className="text-sm font-medium mt-2">All Data</p>
-            <p className="text-xs text-gray-500">{totalEntries} total</p>
+            <p className="text-xs text-gray-500">
+              {useDateRange ? filteredCounts.total : totalEntries} total
+            </p>
           </button>
         </div>
       </div>

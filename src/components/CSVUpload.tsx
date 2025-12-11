@@ -137,7 +137,7 @@ export default function CSVUpload({ userId, onUploadComplete }: CSVUploadProps) 
               <div className="text-4xl mb-3">📤</div>
               <p className="text-sm text-gray-400">Click to upload workout CSV</p>
               <p className="text-xs text-gray-500 mt-2">
-                Columns: date, exercise, category, sets, reps, weight
+                Columns: date, exercise, category, sets, reps, weight, caloriesBurned
               </p>
             </div>
           </label>
@@ -255,10 +255,10 @@ export default function CSVUpload({ userId, onUploadComplete }: CSVUploadProps) 
           <div>
             <h4 className="text-neon-cyan font-medium mb-2">Workout CSV</h4>
             <pre className="bg-midnight/50 p-3 rounded-lg overflow-x-auto text-xs text-gray-400">
-{`date,exercise,category,sets,reps,weight
-2024-01-15,Bench Press,strength,4,10,60
-2024-01-15,Squats,strength,4,8,80
-2024-01-15,Running,cardio,1,,30`}
+{`date,exercise,category,sets,reps,weight,caloriesBurned
+2024-01-15,Bench Press,strength,4,10,60,150
+2024-01-15,Squats,strength,4,8,80,200
+2024-01-15,Running,cardio,1,,,300`}
             </pre>
           </div>
         </div>
