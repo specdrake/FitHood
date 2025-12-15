@@ -440,6 +440,70 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
         </div>
       )}
 
+      {/* Daily Deficit Table */}
+      {dailyTdee > 0 && summaries.length > 0 && (
+        <div className="glass rounded-2xl p-6">
+          <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+            <span>📊</span> Daily Deficit Breakdown
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left py-2 px-2 text-gray-400 font-medium">Date</th>
+                  <th className="text-right py-2 px-2 text-gray-400 font-medium">Calories In</th>
+                  <th className="text-right py-2 px-2 text-gray-400 font-medium">TDEE</th>
+                  <th className="text-right py-2 px-2 text-gray-400 font-medium">Workout</th>
+                  <th className="text-right py-2 px-2 text-gray-400 font-medium">Total Out</th>
+                  <th className="text-right py-2 px-2 text-gray-400 font-medium">Deficit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summaries.map((day) => {
+                  const dayBurned = day.workoutEntries.reduce((sum, w) => sum + (w.caloriesBurned || 0), 0);
+                  const dayOut = dailyTdee + dayBurned;
+                  const dayDeficit = day.totalCalories - dayOut;
+                  
+                  return (
+                    <tr key={day.date} className="border-b border-white/5 hover:bg-white/5">
+                      <td className="py-2 px-2">{formatDisplayDate(day.date)}</td>
+                      <td className="text-right py-2 px-2 font-mono">
+                        {day.totalCalories > 0 ? day.totalCalories.toLocaleString() : '-'}
+                      </td>
+                      <td className="text-right py-2 px-2 font-mono text-amber-400">
+                        {Math.round(dailyTdee).toLocaleString()}
+                      </td>
+                      <td className="text-right py-2 px-2 font-mono text-coral">
+                        {dayBurned > 0 ? dayBurned.toLocaleString() : '-'}
+                      </td>
+                      <td className="text-right py-2 px-2 font-mono">
+                        {Math.round(dayOut).toLocaleString()}
+                      </td>
+                      <td className={`text-right py-2 px-2 font-mono font-bold ${
+                        dayDeficit < 0 ? 'text-electric' : dayDeficit > 0 ? 'text-coral' : 'text-gray-500'
+                      }`}>
+                        {day.totalCalories > 0 ? dayDeficit.toLocaleString() : '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {/* Total Row */}
+                <tr className="border-t-2 border-white/20 font-bold">
+                  <td className="py-3 px-2">Total ({dateRange}D)</td>
+                  <td className="text-right py-3 px-2 font-mono">{totalCalories.toLocaleString()}</td>
+                  <td className="text-right py-3 px-2 font-mono text-amber-400">{Math.round(totalTdee).toLocaleString()}</td>
+                  <td className="text-right py-3 px-2 font-mono text-coral">{totalCaloriesBurned.toLocaleString()}</td>
+                  <td className="text-right py-3 px-2 font-mono">{Math.round(totalExpenditure).toLocaleString()}</td>
+                  <td className={`text-right py-3 px-2 font-mono ${totalDeficit < 0 ? 'text-electric' : 'text-coral'}`}>
+                    {totalDeficit.toLocaleString()}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* BMI/BMR Calculator & Deficit Tracker */}
       <HealthCalculator 
         userId={userId}
