@@ -139,18 +139,15 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
   const bmr = calculateBMR();
   const dailyTdee = userProfile ? bmr * (ACTIVITY_MULTIPLIERS[userProfile.activityLevel] || 1.55) : 0;
   
-  // Calculate TOTAL deficit for LOGGED days
+  // Calculate TOTAL deficit for selected period (dateRange)
   // Formula: Deficit = Calories In - (TDEE + Workout Burned)
-  // TDEE already includes BMR + sedentary activity
-  // Workout burned is additional expenditure on top of TDEE
-  const totalTdee = dailyTdee * daysWithCalories; // TDEE for logged days
-  const totalExpenditure = totalTdee + totalCaloriesBurned; // Total burn = TDEE + exercise
-  const totalDeficit = dailyTdee > 0 && daysWithCalories > 0 
-    ? Math.round(totalCalories - totalExpenditure) // Intake - Expenditure
-    : 0;
+  // TDEE = daily TDEE × selected period (7, 14, or 30 days)
+  const totalTdee = dailyTdee * dateRange;
+  const totalExpenditure = totalTdee + totalCaloriesBurned;
+  const totalDeficit = dailyTdee > 0 ? Math.round(totalCalories - totalExpenditure) : 0;
   
   // Daily average for display
-  const avgDailyDeficit = daysWithCalories > 0 ? Math.round(totalDeficit / daysWithCalories) : 0;
+  const avgDailyDeficit = dateRange > 0 ? Math.round(totalDeficit / dateRange) : 0;
 
   const macroPercentages = getMacroPercentages(totalProtein, totalCarbs, totalFat);
   const macroData = [
@@ -230,15 +227,13 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${totalDeficit < 0 ? 'bg-electric/20' : 'bg-coral/20'}`}>
               {totalDeficit < 0 ? '📉' : '📈'}
             </div>
-            <span className="text-gray-400 text-sm">{daysWithCalories}/{dateRange}D Deficit</span>
+            <span className="text-gray-400 text-sm">{dateRange}D Deficit</span>
           </div>
           <p className={`text-3xl font-bold font-mono ${totalDeficit < 0 ? 'text-electric' : 'text-coral'}`}>
             {totalDeficit !== 0 ? totalDeficit.toLocaleString() : '--'}
           </p>
           <p className="text-xs text-gray-500 mt-1">
-            {totalDeficit !== 0 ? (
-              <>In: {totalCalories.toLocaleString()} - Out: {Math.round(totalExpenditure).toLocaleString()} (TDEE:{Math.round(totalTdee)} + Burn:{totalCaloriesBurned})</>
-            ) : 'Set profile first'}
+            {totalDeficit !== 0 ? `${avgDailyDeficit.toLocaleString()}/day avg` : 'Set profile first'}
           </p>
         </div>
 
