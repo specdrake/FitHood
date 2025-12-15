@@ -114,10 +114,29 @@ const COOKED_FOODS: FoodItem[] = [
   { name: 'Roti/Chapati (1 piece)', calories: 80, protein: 2.5, carbs: 15, fat: 1.5, fiber: 0.6, category: 'cooked', servingSize: '1 roti (~30g)' },
   { name: 'Paratha Plain (1 piece)', calories: 150, protein: 3, carbs: 20, fat: 7, category: 'cooked', servingSize: '1 paratha (~50g)' },
   { name: 'Paratha Aloo (1 piece)', calories: 200, protein: 4, carbs: 28, fat: 9, category: 'cooked', servingSize: '1 paratha' },
+  { name: 'Paratha Mooli/Radish (1 piece)', calories: 180, protein: 3.5, carbs: 24, fat: 8, fiber: 1.5, category: 'cooked', servingSize: '1 paratha' },
+  { name: 'Mooli Paratha (1 piece)', calories: 180, protein: 3.5, carbs: 24, fat: 8, fiber: 1.5, category: 'cooked', servingSize: '1 paratha' },
+  { name: 'Paratha Gobhi (1 piece)', calories: 190, protein: 4, carbs: 25, fat: 8, category: 'cooked', servingSize: '1 paratha' },
+  { name: 'Paratha Paneer (1 piece)', calories: 250, protein: 8, carbs: 22, fat: 15, category: 'cooked', servingSize: '1 paratha' },
+  { name: 'Paratha Methi (1 piece)', calories: 170, protein: 4, carbs: 22, fat: 7, fiber: 2, category: 'cooked', servingSize: '1 paratha' },
+  { name: 'Paratha Pyaaz (1 piece)', calories: 175, protein: 3.5, carbs: 23, fat: 8, category: 'cooked', servingSize: '1 paratha' },
+  { name: 'Paratha Mix Veg (1 piece)', calories: 185, protein: 4, carbs: 24, fat: 8, category: 'cooked', servingSize: '1 paratha' },
+  { name: 'Laccha Paratha (1 piece)', calories: 200, protein: 4, carbs: 26, fat: 10, category: 'cooked', servingSize: '1 paratha' },
+  { name: 'Lachha Paratha (1 piece)', calories: 200, protein: 4, carbs: 26, fat: 10, category: 'cooked', servingSize: '1 paratha' },
+  { name: 'Thepla (1 piece)', calories: 100, protein: 3, carbs: 15, fat: 4, fiber: 1, category: 'cooked', servingSize: '1 thepla' },
   { name: 'Puri (1 piece)', calories: 100, protein: 2, carbs: 12, fat: 5, category: 'cooked', servingSize: '1 puri' },
   { name: 'Naan (1 piece)', calories: 260, protein: 8, carbs: 45, fat: 5, category: 'cooked', servingSize: '1 naan' },
+  { name: 'Butter Naan (1 piece)', calories: 300, protein: 8, carbs: 45, fat: 9, category: 'cooked', servingSize: '1 naan' },
+  { name: 'Garlic Naan (1 piece)', calories: 280, protein: 8, carbs: 46, fat: 7, category: 'cooked', servingSize: '1 naan' },
+  { name: 'Kulcha (1 piece)', calories: 270, protein: 7, carbs: 42, fat: 8, category: 'cooked', servingSize: '1 kulcha' },
+  { name: 'Amritsari Kulcha (1 piece)', calories: 300, protein: 8, carbs: 40, fat: 12, category: 'cooked', servingSize: '1 kulcha' },
   { name: 'Bhatura (1 piece)', calories: 200, protein: 4, carbs: 28, fat: 8, category: 'cooked', servingSize: '1 bhatura' },
   { name: 'Makki Ki Roti (1 piece)', calories: 110, protein: 2, carbs: 20, fat: 3, fiber: 2, category: 'cooked', servingSize: '1 roti' },
+  { name: 'Bajra Roti (1 piece)', calories: 100, protein: 3, carbs: 18, fat: 3, fiber: 2, category: 'cooked', servingSize: '1 roti' },
+  { name: 'Jowar Roti (1 piece)', calories: 95, protein: 2.5, carbs: 17, fat: 2, fiber: 2, category: 'cooked', servingSize: '1 roti' },
+  { name: 'Missi Roti (1 piece)', calories: 120, protein: 5, carbs: 18, fat: 3, fiber: 2, category: 'cooked', servingSize: '1 roti' },
+  { name: 'Tandoori Roti (1 piece)', calories: 110, protein: 3, carbs: 20, fat: 2, category: 'cooked', servingSize: '1 roti' },
+  { name: 'Rumali Roti (1 piece)', calories: 90, protein: 3, carbs: 18, fat: 1, category: 'cooked', servingSize: '1 roti' },
 
   // South Indian
   { name: 'Dosa Plain (1 piece)', calories: 120, protein: 3, carbs: 18, fat: 4, category: 'cooked', servingSize: '1 dosa' },
@@ -207,6 +226,73 @@ const COOKED_FOODS: FoodItem[] = [
   { name: 'Whey Protein (1 scoop)', calories: 120, protein: 24, carbs: 3, fat: 2, category: 'protein', servingSize: '30g' },
   { name: 'Whey Protein (2 scoops)', calories: 240, protein: 48, carbs: 6, fat: 4, category: 'protein', servingSize: '60g' },
   { name: 'Soya Chunks, Cooked (1 bowl)', calories: 170, protein: 26, carbs: 16, fat: 1, category: 'protein', servingSize: '50g dry' },
+
+  // More Breakfast Items
+  { name: 'Cornflakes with Milk (1 bowl)', calories: 200, protein: 6, carbs: 40, fat: 3, category: 'cooked', servingSize: '1 bowl' },
+  { name: 'Oats with Milk (1 bowl)', calories: 250, protein: 10, carbs: 35, fat: 8, fiber: 5, category: 'cooked', servingSize: '1 bowl' },
+  { name: 'Muesli with Milk (1 bowl)', calories: 280, protein: 8, carbs: 45, fat: 8, fiber: 4, category: 'cooked', servingSize: '1 bowl' },
+  { name: 'Daliya/Broken Wheat (1 bowl)', calories: 150, protein: 5, carbs: 28, fat: 2, fiber: 4, category: 'cooked', servingSize: '1 bowl' },
+  { name: 'Vermicelli/Sevai (1 bowl)', calories: 160, protein: 4, carbs: 30, fat: 4, category: 'cooked', servingSize: '1 bowl' },
+  { name: 'Aloo Puri (1 serving)', calories: 350, protein: 6, carbs: 45, fat: 16, category: 'cooked', servingSize: '2 puri + sabzi' },
+  { name: 'Bread Toast (2 slices)', calories: 140, protein: 4, carbs: 26, fat: 2, category: 'cooked', servingSize: '2 slices' },
+  { name: 'Bread Butter (2 slices)', calories: 200, protein: 4, carbs: 26, fat: 8, category: 'cooked', servingSize: '2 slices' },
+  { name: 'Bread Jam (2 slices)', calories: 180, protein: 4, carbs: 35, fat: 2, category: 'cooked', servingSize: '2 slices' },
+  { name: 'Sandwich Veg (1)', calories: 200, protein: 6, carbs: 28, fat: 8, category: 'cooked', servingSize: '1 sandwich' },
+  { name: 'Sandwich Cheese (1)', calories: 280, protein: 10, carbs: 28, fat: 14, category: 'cooked', servingSize: '1 sandwich' },
+  { name: 'Grilled Sandwich (1)', calories: 250, protein: 8, carbs: 30, fat: 11, category: 'cooked', servingSize: '1 sandwich' },
+
+  // More Snacks & Street Food
+  { name: 'Maggi (1 packet)', calories: 320, protein: 8, carbs: 48, fat: 12, category: 'snacks', servingSize: '1 packet' },
+  { name: 'Instant Noodles (1 packet)', calories: 320, protein: 8, carbs: 48, fat: 12, category: 'snacks', servingSize: '1 packet' },
+  { name: 'Chole Bhature (1 plate)', calories: 550, protein: 14, carbs: 60, fat: 28, fiber: 6, category: 'cooked', servingSize: '1 plate' },
+  { name: 'Aloo Tikki (1 piece)', calories: 120, protein: 2, carbs: 18, fat: 5, category: 'snacks', servingSize: '1 tikki' },
+  { name: 'Aloo Tikki Chole (1 plate)', calories: 350, protein: 10, carbs: 45, fat: 15, category: 'snacks', servingSize: '1 plate' },
+  { name: 'Dahi Bhalla (2 pieces)', calories: 200, protein: 6, carbs: 25, fat: 8, category: 'snacks', servingSize: '2 pieces' },
+  { name: 'Papdi Chaat (1 plate)', calories: 250, protein: 5, carbs: 35, fat: 10, category: 'snacks', servingSize: '1 plate' },
+  { name: 'Sev Puri (6 pieces)', calories: 180, protein: 4, carbs: 28, fat: 6, category: 'snacks', servingSize: '6 pieces' },
+  { name: 'Dahi Puri (6 pieces)', calories: 200, protein: 5, carbs: 30, fat: 7, category: 'snacks', servingSize: '6 pieces' },
+  { name: 'Ragda Pattice (1 plate)', calories: 280, protein: 8, carbs: 40, fat: 10, category: 'snacks', servingSize: '1 plate' },
+  { name: 'Dabeli (1)', calories: 200, protein: 4, carbs: 32, fat: 7, category: 'snacks', servingSize: '1 dabeli' },
+  { name: 'Dhokla (4 pieces)', calories: 180, protein: 6, carbs: 28, fat: 5, category: 'snacks', servingSize: '4 pieces' },
+  { name: 'Khandvi (1 serving)', calories: 150, protein: 5, carbs: 20, fat: 5, category: 'snacks', servingSize: '1 serving' },
+  { name: 'Fafda (5 pieces)', calories: 200, protein: 4, carbs: 25, fat: 10, category: 'snacks', servingSize: '5 pieces' },
+  { name: 'Jalebi Fafda (1 plate)', calories: 350, protein: 5, carbs: 55, fat: 14, category: 'snacks', servingSize: '1 plate' },
+  { name: 'Gathiya (50g)', calories: 250, protein: 6, carbs: 30, fat: 12, category: 'snacks', servingSize: '50g' },
+  { name: 'Namkeen/Mixture (50g)', calories: 250, protein: 5, carbs: 28, fat: 14, category: 'snacks', servingSize: '50g' },
+  { name: 'Murukku (4 pieces)', calories: 160, protein: 3, carbs: 22, fat: 7, category: 'snacks', servingSize: '4 pieces' },
+  { name: 'Chakli (3 pieces)', calories: 150, protein: 3, carbs: 20, fat: 7, category: 'snacks', servingSize: '3 pieces' },
+  { name: 'Mathri (4 pieces)', calories: 180, protein: 3, carbs: 20, fat: 10, category: 'snacks', servingSize: '4 pieces' },
+
+  // Fast Food
+  { name: 'Pizza Slice (1)', calories: 250, protein: 10, carbs: 30, fat: 10, category: 'snacks', servingSize: '1 slice' },
+  { name: 'Burger Veg (1)', calories: 350, protein: 12, carbs: 45, fat: 14, category: 'snacks', servingSize: '1 burger' },
+  { name: 'Burger Chicken (1)', calories: 450, protein: 22, carbs: 40, fat: 22, category: 'snacks', servingSize: '1 burger' },
+  { name: 'French Fries (medium)', calories: 300, protein: 4, carbs: 40, fat: 14, category: 'snacks', servingSize: 'medium' },
+  { name: 'Fried Chicken (2 pieces)', calories: 400, protein: 30, carbs: 15, fat: 26, category: 'snacks', servingSize: '2 pieces' },
+  { name: 'Wrap/Roll Veg (1)', calories: 280, protein: 8, carbs: 35, fat: 12, category: 'snacks', servingSize: '1 roll' },
+  { name: 'Wrap/Roll Chicken (1)', calories: 350, protein: 18, carbs: 32, fat: 16, category: 'snacks', servingSize: '1 roll' },
+  { name: 'Frankie/Kathi Roll (1)', calories: 320, protein: 12, carbs: 35, fat: 14, category: 'snacks', servingSize: '1 roll' },
+  { name: 'Pasta (1 plate)', calories: 400, protein: 12, carbs: 60, fat: 12, category: 'cooked', servingSize: '1 plate' },
+  { name: 'Chowmein/Noodles (1 plate)', calories: 350, protein: 10, carbs: 50, fat: 12, category: 'cooked', servingSize: '1 plate' },
+  { name: 'Fried Rice (1 plate)', calories: 380, protein: 8, carbs: 55, fat: 14, category: 'cooked', servingSize: '1 plate' },
+  { name: 'Manchurian Dry (1 serving)', calories: 200, protein: 6, carbs: 25, fat: 9, category: 'cooked', servingSize: '1 serving' },
+  { name: 'Manchurian Gravy (1 bowl)', calories: 250, protein: 7, carbs: 28, fat: 12, category: 'cooked', servingSize: '1 bowl' },
+  { name: 'Spring Roll (2 pieces)', calories: 180, protein: 4, carbs: 22, fat: 9, category: 'snacks', servingSize: '2 pieces' },
+
+  // Regional Dishes
+  { name: 'Pongal (1 bowl)', calories: 200, protein: 6, carbs: 35, fat: 5, category: 'cooked', servingSize: '1 bowl' },
+  { name: 'Bisibelebath (1 plate)', calories: 350, protein: 10, carbs: 55, fat: 10, category: 'cooked', servingSize: '1 plate' },
+  { name: 'Puliogare/Tamarind Rice (1 plate)', calories: 280, protein: 5, carbs: 50, fat: 7, category: 'cooked', servingSize: '1 plate' },
+  { name: 'Lemon Rice (1 plate)', calories: 250, protein: 5, carbs: 48, fat: 5, category: 'cooked', servingSize: '1 plate' },
+  { name: 'Curd Rice (1 bowl)', calories: 180, protein: 6, carbs: 32, fat: 4, category: 'cooked', servingSize: '1 bowl' },
+  { name: 'Veg Pulao (1 plate)', calories: 280, protein: 6, carbs: 48, fat: 8, category: 'cooked', servingSize: '1 plate' },
+  { name: 'Jeera Rice (1 plate)', calories: 230, protein: 5, carbs: 45, fat: 4, category: 'cooked', servingSize: '1 plate' },
+  { name: 'Khichdi (1 bowl)', calories: 200, protein: 8, carbs: 35, fat: 4, fiber: 3, category: 'cooked', servingSize: '1 bowl' },
+  { name: 'Dal Khichdi (1 bowl)', calories: 220, protein: 10, carbs: 38, fat: 4, fiber: 4, category: 'cooked', servingSize: '1 bowl' },
+  { name: 'Pav Bhaji (1 serving)', calories: 400, protein: 10, carbs: 55, fat: 16, category: 'cooked', servingSize: '1 serving' },
+  { name: 'Misal Pav (1 serving)', calories: 450, protein: 14, carbs: 55, fat: 18, fiber: 6, category: 'cooked', servingSize: '1 serving' },
+  { name: 'Sabudana Khichdi (1 bowl)', calories: 250, protein: 4, carbs: 45, fat: 8, category: 'cooked', servingSize: '1 bowl' },
+  { name: 'Sabudana Vada (2 pieces)', calories: 200, protein: 3, carbs: 30, fat: 8, category: 'snacks', servingSize: '2 pieces' },
 ];
 
 // Combined database
@@ -217,21 +303,49 @@ export function searchFoods(query: string): FoodItem[] {
   const lowerQuery = query.toLowerCase().trim();
   if (!lowerQuery) return COOKED_FOODS.slice(0, 20); // Return cooked foods when no query
   
+  // Split query into words for multi-word matching
+  const queryWords = lowerQuery.split(/\s+/).filter(w => w.length > 0);
+  
   // Score-based search for better results
   const results = FOOD_DATABASE.map(food => {
     const name = food.name.toLowerCase();
+    const nameWords = name.split(/[\s,()\/]+/).filter(w => w.length > 0);
     let score = 0;
     
     // Exact match gets highest score
-    if (name === lowerQuery) score = 100;
-    // Starts with query
-    else if (name.startsWith(lowerQuery)) score = 80;
-    // Word starts with query
-    else if (name.split(/[\s,()]+/).some(word => word.startsWith(lowerQuery))) score = 60;
-    // Contains query
-    else if (name.includes(lowerQuery)) score = 40;
+    if (name === lowerQuery) {
+      score = 100;
+    }
+    // Multi-word: check if ALL query words are found in name
+    else if (queryWords.length > 1) {
+      const allWordsMatch = queryWords.every(qw => 
+        nameWords.some(nw => nw.startsWith(qw) || nw.includes(qw))
+      );
+      if (allWordsMatch) {
+        // Higher score if words appear in order
+        const inOrder = queryWords.every((qw, i) => {
+          const foundIdx = nameWords.findIndex(nw => nw.startsWith(qw));
+          return foundIdx >= i;
+        });
+        score = inOrder ? 85 : 70;
+      }
+    }
+    // Single word: starts with query
+    else if (name.startsWith(lowerQuery)) {
+      score = 80;
+    }
+    // Any word in name starts with query
+    else if (nameWords.some(word => word.startsWith(lowerQuery))) {
+      score = 60;
+    }
+    // Contains query anywhere
+    else if (name.includes(lowerQuery)) {
+      score = 40;
+    }
     // Category match
-    else if (food.category.includes(lowerQuery)) score = 20;
+    else if (food.category.includes(lowerQuery)) {
+      score = 20;
+    }
     
     return { food, score };
   })
