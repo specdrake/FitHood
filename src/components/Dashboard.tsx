@@ -139,7 +139,9 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
   
   const bmr = calculateBMR();
   const tdee = userProfile ? bmr * (ACTIVITY_MULTIPLIERS[userProfile.activityLevel] || 1.55) : 0;
-  const avgDeficit = tdee > 0 && avgCalories > 0 ? Math.round(tdee - avgCalories + avgCaloriesBurned) : 0;
+  // Deficit = Net Intake - TDEE (negative means deficit, positive means surplus)
+  const avgNetCalories = avgCalories - avgCaloriesBurned;
+  const avgDeficit = tdee > 0 && avgCalories > 0 ? Math.round(avgNetCalories - tdee) : 0;
 
   const macroPercentages = getMacroPercentages(totalProtein, totalCarbs, totalFat);
   const macroData = [
@@ -216,16 +218,16 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
 
         <div className="glass rounded-2xl p-5 animate-slide-up stagger-3">
           <div className="flex items-center gap-3 mb-3">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${avgDeficit > 0 ? 'bg-electric/20' : 'bg-coral/20'}`}>
-              {avgDeficit > 0 ? '📉' : '📈'}
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${avgDeficit < 0 ? 'bg-electric/20' : 'bg-coral/20'}`}>
+              {avgDeficit < 0 ? '📉' : '📈'}
             </div>
-            <span className="text-gray-400 text-sm">Avg Deficit</span>
+            <span className="text-gray-400 text-sm">Daily Balance</span>
           </div>
-          <p className={`text-3xl font-bold font-mono ${avgDeficit > 0 ? 'text-electric' : 'text-coral'}`}>
-            {avgDeficit !== 0 ? `${avgDeficit > 0 ? '+' : ''}${avgDeficit}` : '--'}
+          <p className={`text-3xl font-bold font-mono ${avgDeficit < 0 ? 'text-electric' : 'text-coral'}`}>
+            {avgDeficit !== 0 ? avgDeficit.toLocaleString() : '--'}
           </p>
           <p className="text-xs text-gray-500 mt-1">
-            {avgDeficit > 0 ? 'cal/day deficit' : avgDeficit < 0 ? 'cal/day surplus' : 'Set profile first'}
+            {avgDeficit < 0 ? 'cal deficit (losing)' : avgDeficit > 0 ? 'cal surplus (gaining)' : 'Set profile first'}
           </p>
         </div>
 

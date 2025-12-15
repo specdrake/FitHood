@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { getSupabase } from '@/lib/supabase';
-import { clearUserData, getAllFoods, getAllWorkouts, getAllWeights } from '@/lib/db';
-import { exportFoodsToCSV, exportWorkoutsToCSV, exportWeightsToCSV, exportAllDataToCSV } from '@/lib/csv-export';
-import { FoodEntry, WorkoutEntry, WeightEntry } from '@/lib/types';
+import { clearUserData, getAllFoods, getAllWorkouts, getAllWeights, getUserProfile } from '@/lib/db';
+import { exportFoodsToCSV, exportWorkoutsToCSV, exportWeightsToCSV, exportAllDataToCSV, exportDailyDeficitToCSV } from '@/lib/csv-export';
+import { FoodEntry, WorkoutEntry, WeightEntry, UserProfile, DailySummary } from '@/lib/types';
+import { calculateDailySummary, groupByDate } from '@/lib/utils';
 
 interface SettingsProps {
   userId: string;
@@ -30,6 +31,7 @@ export default function Settings({ userId, userName }: SettingsProps) {
     workouts: WorkoutEntry[];
     weights: WeightEntry[];
   }>({ foods: [], workouts: [], weights: [] });
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     loadDataCounts();
@@ -43,10 +45,11 @@ export default function Settings({ userId, userName }: SettingsProps) {
 
   const loadDataCounts = async () => {
     try {
-      const [foods, workouts, weights] = await Promise.all([
+      const [foods, workouts, weights, profile] = await Promise.all([
         getAllFoods(userId),
         getAllWorkouts(userId),
         getAllWeights(userId),
+        getUserProfile(userId),
       ]);
       setDataCounts({
         foods: foods.length,
@@ -54,6 +57,7 @@ export default function Settings({ userId, userName }: SettingsProps) {
         weights: weights.length,
       });
       setAllData({ foods, workouts, weights });
+      setUserProfile(profile);
     } catch (error) {
       console.error('Failed to load data counts:', error);
     }
@@ -143,6 +147,37 @@ export default function Settings({ userId, userName }: SettingsProps) {
     exportAllDataToCSV(filtered.foods, filtered.workouts, filtered.weights);
     const total = filtered.foods.length + filtered.workouts.length + filtered.weights.length;
     setMessage({ type: 'success', text: `Exported ${total} total entries!` });
+  };
+
+  const handleExportDeficit = () => {
+    const filtered = getFilteredData();
+    if (filtered.foods.length === 0) {
+      setMessage({ type: 'error', text: 'No food data to export' });
+      return;
+    }
+
+    // Build daily summaries
+    const foodsByDate = groupByDate(filtered.foods);
+    const workoutsByDate = groupByDate(filtered.workouts);
+    const weightsByDate = new Map(filtered.weights.map((w) => [w.date, w.weight]));
+
+    // Get all unique dates
+    const allDates = new Set([
+      ...filtered.foods.map(f => f.date),
+      ...filtered.workouts.map(w => w.date),
+    ]);
+
+    const summaries: DailySummary[] = Array.from(allDates)
+      .sort()
+      .map(date => {
+        const dayFoods = foodsByDate.get(date) || [];
+        const dayWorkouts = workoutsByDate.get(date) || [];
+        const dayWeight = weightsByDate.get(date);
+        return calculateDailySummary(date, dayFoods, dayWorkouts, dayWeight);
+      });
+
+    exportDailyDeficitToCSV(summaries, filtered.weights, userProfile);
+    setMessage({ type: 'success', text: `Exported ${summaries.length} days of deficit data!` });
   };
 
   const handleClearData = async () => {
@@ -254,7 +289,7 @@ export default function Settings({ userId, userName }: SettingsProps) {
           )}
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <button
             onClick={handleExportFoods}
             disabled={useDateRange ? filteredCounts.foods === 0 : dataCounts.foods === 0}
@@ -288,6 +323,18 @@ export default function Settings({ userId, userName }: SettingsProps) {
             <p className="text-sm font-medium mt-2">Weight</p>
             <p className="text-xs text-gray-500">
               {useDateRange ? filteredCounts.weights : dataCounts.weights} entries
+            </p>
+          </button>
+          
+          <button
+            onClick={handleExportDeficit}
+            disabled={useDateRange ? filteredCounts.foods === 0 : dataCounts.foods === 0}
+            className="p-4 rounded-xl bg-white/5 hover:bg-purple-500/20 border border-transparent hover:border-purple-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span className="text-2xl">📉</span>
+            <p className="text-sm font-medium mt-2">Deficit</p>
+            <p className="text-xs text-gray-500">
+              Daily summary
             </p>
           </button>
           
