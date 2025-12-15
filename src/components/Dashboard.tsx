@@ -20,6 +20,7 @@ import {
 import { getFoodsByDateRange, getWorkoutsByDateRange, getAllWeights } from '@/lib/db';
 import { FoodEntry, WorkoutEntry, WeightEntry, DailySummary } from '@/lib/types';
 import { formatDisplayDate, getDateRange, groupByDate, calculateDailySummary, getMacroPercentages } from '@/lib/utils';
+import HealthCalculator from './HealthCalculator';
 
 interface DashboardProps {
   userId: string;
@@ -105,6 +106,16 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
   const daysWithProtein = summaries.filter(s => s.totalProtein > 0).length;
   const avgCalories = daysWithCalories > 0 ? Math.round(totalCalories / daysWithCalories) : 0;
   const avgProtein = daysWithProtein > 0 ? Math.round(totalProtein / daysWithProtein) : 0;
+
+  // Calculate average calories burned from workouts
+  const totalCaloriesBurned = summaries.reduce((sum, s) => 
+    sum + s.workoutEntries.reduce((ws, w) => ws + (w.caloriesBurned || 0), 0), 0
+  );
+  const daysWithWorkouts = summaries.filter(s => s.workoutEntries.length > 0).length;
+  const avgCaloriesBurned = daysWithWorkouts > 0 ? Math.round(totalCaloriesBurned / daysWithWorkouts) : 0;
+
+  // Get latest weight
+  const latestWeight = weights.length > 0 ? weights[weights.length - 1].weight : 0;
 
   const macroPercentages = getMacroPercentages(totalProtein, totalCarbs, totalFat);
   const macroData = [
@@ -388,6 +399,13 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
           </div>
         </div>
       )}
+
+      {/* BMI/BMR Calculator & Deficit Tracker */}
+      <HealthCalculator 
+        currentWeight={latestWeight}
+        avgDailyCalories={avgCalories}
+        avgDailyBurned={avgCaloriesBurned}
+      />
     </div>
   );
 }

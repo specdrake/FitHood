@@ -138,7 +138,7 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
       protein: parseFloat(formData.protein) || 0,
       carbs: parseFloat(formData.carbs) || 0,
       fat: parseFloat(formData.fat) || 0,
-      count: parseInt(formData.count) || 1,
+      count: parseFloat(formData.count) || 1, // Allow fractional servings
       mealType: formData.mealType,
     };
 
@@ -480,13 +480,14 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                     )}
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Count</label>
+                    <label className="block text-xs text-gray-500 mb-1">Servings</label>
                     <input
                       type="number"
+                      step="0.1"
                       value={formData.count}
                       onChange={(e) => setFormData({ ...formData, count: e.target.value })}
                       placeholder="1"
-                      min="1"
+                      min="0.1"
                       className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
                     />
                   </div>

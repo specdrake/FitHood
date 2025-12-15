@@ -76,3 +76,13 @@ export interface FoodContribution {
   percentOfTotal: number;
 }
 
+// User profile for BMI/BMR calculations
+export interface UserProfile {
+  height: number; // cm
+  age: number;
+  gender: 'male' | 'female';
+  activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | 'veryActive';
+  goalWeight?: number; // kg
+  weeklyGoal?: number; // kg to lose/gain per week
+}
+
