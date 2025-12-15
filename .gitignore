@@ -41,3 +41,4 @@ coverage/
 # Secrets
 token
 .env.vercel
+roadmap
