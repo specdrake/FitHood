@@ -12,10 +12,14 @@ import {
   PieChart,
   Pie,
   Cell,
+  ComposedChart,
+  Line,
+  Legend,
 } from 'recharts';
 import { getAllFoods, deleteFoodEntry, addFoodEntries, updateFoodEntry } from '@/lib/db';
 import { FoodEntry, FoodContribution } from '@/lib/types';
 import { formatDisplayDate, formatDate, groupByDate, calculateFoodContributions } from '@/lib/utils';
+import { searchFoods, FoodItem, getAllCategories, getFoodsByCategory } from '@/lib/food-database';
 
 interface FoodTrackerProps {
   userId: string;
@@ -23,6 +27,18 @@ interface FoodTrackerProps {
 }
 
 const COLORS = ['#00ff88', '#ff6b6b', '#ffc93c', '#00d4ff', '#a855f7', '#f472b6', '#fb923c', '#34d399'];
+
+// Common tooltip style for all charts
+const tooltipStyle = {
+  contentStyle: {
+    background: 'rgba(15, 15, 26, 0.95)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '8px',
+    color: '#fff',
+  },
+  itemStyle: { color: '#fff' },
+  labelStyle: { color: '#fff' },
+};
 
 type FormState = {
   name: string;
@@ -53,6 +69,9 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormState>(emptyForm);
+  const [foodSuggestions, setFoodSuggestions] = useState<FoodItem[]>([]);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   useEffect(() => {
     if (userId) {
@@ -130,6 +149,42 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
     setFormData(emptyForm);
     setShowForm(false);
     setEditingId(null);
+    setFoodSuggestions([]);
+  };
+
+  const handleFoodNameChange = (value: string) => {
+    setFormData({ ...formData, name: value });
+    if (value.length >= 2) {
+      setFoodSuggestions(searchFoods(value));
+    } else {
+      setFoodSuggestions([]);
+    }
+  };
+
+  const selectFoodSuggestion = (food: FoodItem) => {
+    setFormData({
+      ...formData,
+      name: food.name,
+      calories: String(food.calories),
+      protein: String(food.protein),
+      carbs: String(food.carbs),
+      fat: String(food.fat),
+    });
+    setFoodSuggestions([]);
+  };
+
+  const quickAddFood = (food: FoodItem) => {
+    setFormData({
+      name: food.name,
+      calories: String(food.calories),
+      protein: String(food.protein),
+      carbs: String(food.carbs),
+      fat: String(food.fat),
+      count: '1',
+      mealType: 'snack',
+    });
+    setShowForm(true);
+    setShowQuickAdd(false);
   };
 
   const navigateDate = (days: number) => {
@@ -155,6 +210,8 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
       fullDate: date,
       calories: dayFoods.reduce((sum, f) => sum + getTotalCalories(f), 0),
       protein: dayFoods.reduce((sum, f) => sum + getTotalProtein(f), 0),
+      carbs: dayFoods.reduce((sum, f) => sum + getTotalCarbs(f), 0),
+      fat: dayFoods.reduce((sum, f) => sum + getTotalFat(f), 0),
     };
   }).slice(0, 14).reverse();
 
@@ -226,30 +283,104 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
               <h3 className="font-semibold text-lg flex items-center gap-2">
                 <span>🍽️</span> {formatDisplayDate(selectedDate)}
               </h3>
-              {!showForm && (
-                <button
-                  onClick={() => setShowForm(true)}
-                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-coral to-amber-glow text-midnight font-semibold hover:glow-sm transition-all text-sm"
-                >
-                  + Add Food
-                </button>
-              )}
+              <div className="flex gap-2">
+                {!showForm && !showQuickAdd && (
+                  <>
+                    <button
+                      onClick={() => setShowQuickAdd(true)}
+                      className="px-4 py-2 rounded-lg glass hover:bg-white/10 text-sm"
+                    >
+                      📋 Quick Add
+                    </button>
+                    <button
+                      onClick={() => setShowForm(true)}
+                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-coral to-amber-glow text-midnight font-semibold hover:glow-sm transition-all text-sm"
+                    >
+                      + Custom
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
+
+            {/* Quick Add from Database */}
+            {showQuickAdd && (
+              <div className="mb-6 p-4 rounded-xl bg-white/5 animate-slide-up">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium">Quick Add Food</h4>
+                  <button
+                    onClick={() => setShowQuickAdd(false)}
+                    className="text-gray-500 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex gap-2 mb-3 flex-wrap">
+                  <button
+                    onClick={() => setSelectedCategory('all')}
+                    className={`px-3 py-1 rounded-full text-xs ${selectedCategory === 'all' ? 'bg-coral text-midnight' : 'bg-white/10'}`}
+                  >
+                    All
+                  </button>
+                  {getAllCategories().map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3 py-1 rounded-full text-xs capitalize ${selectedCategory === cat ? 'bg-coral text-midnight' : 'bg-white/10'}`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
+                  {(selectedCategory === 'all' 
+                    ? searchFoods('') || [] 
+                    : getFoodsByCategory(selectedCategory as FoodItem['category'])
+                  ).slice(0, 20).map(food => (
+                    <button
+                      key={food.name}
+                      onClick={() => quickAddFood(food)}
+                      className="p-3 rounded-lg bg-white/5 hover:bg-white/10 text-left text-sm transition-all"
+                    >
+                      <p className="font-medium truncate">{food.name}</p>
+                      <p className="text-xs text-gray-400">{food.calories} cal · {food.protein}g P</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Form */}
             {showForm && (
               <form onSubmit={handleSubmit} className="mb-6 p-4 rounded-xl bg-white/5 animate-slide-up">
                 <div className="grid grid-cols-2 md:grid-cols-7 gap-3 mb-4">
-                  <div className="col-span-2">
-                    <label className="block text-xs text-gray-500 mb-1">Food name</label>
+                  <div className="col-span-2 relative">
+                    <label className="block text-xs text-gray-500 mb-1">Food name (type to search)</label>
                     <input
                       type="text"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="e.g., Chicken breast"
+                      onChange={(e) => handleFoodNameChange(e.target.value)}
+                      placeholder="e.g., Chicken breast, Roti..."
                       className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
                       required
+                      autoComplete="off"
                     />
+                    {/* Suggestions dropdown */}
+                    {foodSuggestions.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-midnight border border-white/20 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {foodSuggestions.map(food => (
+                          <button
+                            key={food.name}
+                            type="button"
+                            onClick={() => selectFoodSuggestion(food)}
+                            className="w-full px-3 py-2 text-left hover:bg-white/10 text-sm border-b border-white/5 last:border-0"
+                          >
+                            <span className="font-medium">{food.name}</span>
+                            <span className="text-gray-400 ml-2 text-xs">{food.calories} cal · {food.protein}g P</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Count</label>
@@ -414,34 +545,72 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
             )}
           </div>
 
-          {/* Daily Chart */}
+          {/* Daily Charts */}
           {dailyTotals.length > 0 && (
-            <div className="glass rounded-2xl p-6">
-              <h3 className="font-semibold text-lg mb-4">📊 Daily Calories (Last 14 Days)</h3>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dailyTotals}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                    <XAxis dataKey="date" stroke="#666" fontSize={10} tickLine={false} />
-                    <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
-                    <Tooltip
-                      contentStyle={{
-                        background: 'rgba(15, 15, 26, 0.95)',
-                        border: '1px solid rgba(255, 107, 107, 0.3)',
-                        borderRadius: '8px',
-                      }}
-                    />
-                    <Bar
-                      dataKey="calories"
-                      fill="#ff6b6b"
-                      radius={[4, 4, 0, 0]}
-                      onClick={(data) => setSelectedDate(data.fullDate)}
-                      cursor="pointer"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+            <>
+              {/* Calories Bar Chart */}
+              <div className="glass rounded-2xl p-6">
+                <h3 className="font-semibold text-lg mb-4">🔥 Daily Calories (Last 14 Days)</h3>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dailyTotals}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                      <XAxis dataKey="date" stroke="#666" fontSize={10} tickLine={false} />
+                      <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
+                      <Tooltip {...tooltipStyle} />
+                      <Bar
+                        dataKey="calories"
+                        name="Calories"
+                        fill="#00ff88"
+                        radius={[4, 4, 0, 0]}
+                        onClick={(data) => setSelectedDate(data.fullDate)}
+                        cursor="pointer"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-            </div>
+
+              {/* Macros Trend Chart */}
+              <div className="glass rounded-2xl p-6">
+                <h3 className="font-semibold text-lg mb-4">📊 Macro Trends (Last 14 Days)</h3>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={dailyTotals}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                      <XAxis dataKey="date" stroke="#666" fontSize={10} tickLine={false} />
+                      <YAxis stroke="#666" fontSize={11} tickLine={false} axisLine={false} />
+                      <Tooltip {...tooltipStyle} />
+                      <Legend wrapperStyle={{ color: '#fff', fontSize: 12 }} />
+                      <Line
+                        type="monotone"
+                        dataKey="protein"
+                        name="Protein (g)"
+                        stroke="#ff6b6b"
+                        strokeWidth={2}
+                        dot={{ fill: '#ff6b6b', r: 3 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="carbs"
+                        name="Carbs (g)"
+                        stroke="#ffc93c"
+                        strokeWidth={2}
+                        dot={{ fill: '#ffc93c', r: 3 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="fat"
+                        name="Fat (g)"
+                        stroke="#00d4ff"
+                        strokeWidth={2}
+                        dot={{ fill: '#00d4ff', r: 3 }}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </>
           )}
         </>
       )}
@@ -472,12 +641,8 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                         ))}
                       </Pie>
                       <Tooltip
-                        contentStyle={{
-                          background: 'rgba(15, 15, 26, 0.95)',
-                          border: '1px solid rgba(0, 255, 136, 0.3)',
-                          borderRadius: '8px',
-                        }}
-                        formatter={(value: number) => [`${value.toLocaleString()} cal`, 'Calories']}
+                        {...tooltipStyle}
+                        formatter={(value: number, name: string) => [`${value.toLocaleString()} cal`, name]}
                       />
                     </PieChart>
                   </ResponsiveContainer>

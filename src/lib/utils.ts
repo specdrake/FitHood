@@ -56,6 +56,21 @@ export function calculateDailySummary(
   };
 }
 
+// Normalize food name for grouping similar items
+// e.g., "Buffalo Milk (350ml)" and "Buffalo Milk (250ml)" -> "buffalo milk"
+export function normalizeFoodName(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    // Remove quantities in parentheses like (350ml), (2 scoops), (100g)
+    .replace(/\s*\([^)]*\d+[^)]*\)/g, '')
+    // Remove trailing numbers with units
+    .replace(/\s+\d+\s*(ml|g|kg|oz|cups?|pieces?|slices?|scoops?|tbsp|tsp|small|medium|large)s?\s*$/i, '')
+    // Normalize whitespace
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function calculateFoodContributions(foods: FoodEntry[]): FoodContribution[] {
   // Helper to get total with count multiplier
   const getTotalCals = (f: FoodEntry) => f.calories * (f.count || 1);
@@ -63,9 +78,10 @@ export function calculateFoodContributions(foods: FoodEntry[]): FoodContribution
   
   const totalCalories = foods.reduce((sum, f) => sum + getTotalCals(f), 0);
   
+  // Group by normalized name for better matching
   const grouped = new Map<string, FoodEntry[]>();
   foods.forEach((food) => {
-    const key = food.name.toLowerCase().trim();
+    const key = normalizeFoodName(food.name);
     const existing = grouped.get(key) || [];
     existing.push(food);
     grouped.set(key, existing);
@@ -78,8 +94,13 @@ export function calculateFoodContributions(foods: FoodEntry[]): FoodContribution
     // Count total servings (sum of counts)
     const totalCount = entries.reduce((sum, f) => sum + (f.count || 1), 0);
     
+    // Use the most common name variant or first one
+    const nameFreq = new Map<string, number>();
+    entries.forEach(e => nameFreq.set(e.name, (nameFreq.get(e.name) || 0) + 1));
+    const mostCommonName = Array.from(nameFreq.entries()).sort((a, b) => b[1] - a[1])[0][0];
+    
     contributions.push({
-      name: entries[0].name, // Use original casing
+      name: mostCommonName,
       totalCalories: totalCals,
       totalProtein: totalProt,
       count: totalCount, // Total servings across all entries

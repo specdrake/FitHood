@@ -9,6 +9,11 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  LineChart,
+  Line,
+  Legend,
+  AreaChart,
+  Area,
 } from 'recharts';
 import { getAllWorkouts, deleteWorkoutEntry, addWorkoutEntries, updateWorkoutEntry } from '@/lib/db';
 import { WorkoutEntry } from '@/lib/types';
@@ -31,6 +36,18 @@ const CATEGORY_ICONS: Record<string, string> = {
   cardio: '🏃',
   flexibility: '🧘',
   other: '⚡',
+};
+
+// Common tooltip style for all charts
+const tooltipStyle = {
+  contentStyle: {
+    background: 'rgba(15, 15, 26, 0.95)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '8px',
+    color: '#fff',
+  },
+  itemStyle: { color: '#fff' },
+  labelStyle: { color: '#fff' },
 };
 
 type FormState = {
@@ -531,48 +548,109 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
             )}
           </div>
 
-          {/* Daily Chart */}
+          {/* Daily Charts */}
           {dailyWorkouts.length > 0 && (
-            <div className="glass rounded-2xl p-6">
-              <h3 className="font-semibold text-lg mb-4">📊 Workout Frequency & Calories</h3>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dailyWorkouts}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                    <XAxis dataKey="date" stroke="#666" fontSize={10} tickLine={false} />
-                    <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
-                    <Tooltip
-                      contentStyle={{
-                        background: 'rgba(15, 15, 26, 0.95)',
-                        border: '1px solid rgba(0, 212, 255, 0.3)',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number, name: string) => {
-                        if (name === 'distance') return [`${value.toFixed(1)} km`, 'Distance'];
-                        if (name === 'calories') return [`${value} cal`, 'Calories'];
-                        return [value, name];
-                      }}
-                    />
-                    <Bar
-                      dataKey="strength"
-                      stackId="a"
-                      fill={CATEGORY_COLORS.strength}
-                      radius={[0, 0, 0, 0]}
-                      onClick={(data) => setSelectedDate(data.fullDate)}
-                      cursor="pointer"
-                    />
-                    <Bar
-                      dataKey="cardio"
-                      stackId="a"
-                      fill={CATEGORY_COLORS.cardio}
-                      radius={[4, 4, 0, 0]}
-                      onClick={(data) => setSelectedDate(data.fullDate)}
-                      cursor="pointer"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+            <>
+              {/* Workout Frequency by Category */}
+              <div className="glass rounded-2xl p-6">
+                <h3 className="font-semibold text-lg mb-4">💪 Workout Frequency (Last 14 Days)</h3>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dailyWorkouts}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                      <XAxis dataKey="date" stroke="#666" fontSize={10} tickLine={false} />
+                      <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
+                      <Tooltip {...tooltipStyle} />
+                      <Legend wrapperStyle={{ color: '#fff', fontSize: 12 }} />
+                      <Bar
+                        dataKey="strength"
+                        name="Strength"
+                        stackId="a"
+                        fill={CATEGORY_COLORS.strength}
+                        radius={[0, 0, 0, 0]}
+                        onClick={(data) => setSelectedDate(data.fullDate)}
+                        cursor="pointer"
+                      />
+                      <Bar
+                        dataKey="cardio"
+                        name="Cardio"
+                        stackId="a"
+                        fill={CATEGORY_COLORS.cardio}
+                        radius={[4, 4, 0, 0]}
+                        onClick={(data) => setSelectedDate(data.fullDate)}
+                        cursor="pointer"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-            </div>
+
+              {/* Calories Burned Trend */}
+              {dailyWorkouts.some(d => d.calories > 0) && (
+                <div className="glass rounded-2xl p-6">
+                  <h3 className="font-semibold text-lg mb-4">🔥 Calories Burned Trend</h3>
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={dailyWorkouts}>
+                        <defs>
+                          <linearGradient id="caloriesGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ff6b6b" stopOpacity={0.4} />
+                            <stop offset="100%" stopColor="#ff6b6b" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                        <XAxis dataKey="date" stroke="#666" fontSize={10} tickLine={false} />
+                        <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
+                        <Tooltip 
+                          {...tooltipStyle}
+                          formatter={(value: number) => [`${value} cal`, 'Calories Burned']}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="calories"
+                          stroke="#ff6b6b"
+                          fill="url(#caloriesGradient)"
+                          strokeWidth={2}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+
+              {/* Distance Walked/Run Trend */}
+              {dailyWorkouts.some(d => d.distance > 0) && (
+                <div className="glass rounded-2xl p-6">
+                  <h3 className="font-semibold text-lg mb-4">📍 Distance Trend (km)</h3>
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={dailyWorkouts}>
+                        <defs>
+                          <linearGradient id="distanceGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#00d4ff" stopOpacity={0.4} />
+                            <stop offset="100%" stopColor="#00d4ff" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                        <XAxis dataKey="date" stroke="#666" fontSize={10} tickLine={false} />
+                        <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
+                        <Tooltip 
+                          {...tooltipStyle}
+                          formatter={(value: number) => [`${value.toFixed(1)} km`, 'Distance']}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="distance"
+                          stroke="#00d4ff"
+                          fill="url(#distanceGradient)"
+                          strokeWidth={2}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </>
       )}

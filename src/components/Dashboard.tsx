@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import {
   LineChart,
   Line,
-  AreaChart,
+  ComposedChart,
   Area,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -14,6 +15,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend,
 } from 'recharts';
 import { getFoodsByDateRange, getWorkoutsByDateRange, getAllWeights } from '@/lib/db';
 import { FoodEntry, WorkoutEntry, WeightEntry, DailySummary } from '@/lib/types';
@@ -29,6 +31,18 @@ const COLORS = {
   coral: '#ff6b6b',
   amber: '#ffc93c',
   cyan: '#00d4ff',
+};
+
+// Common tooltip style for all charts
+const tooltipStyle = {
+  contentStyle: {
+    background: 'rgba(15, 15, 26, 0.95)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '8px',
+    color: '#fff',
+  },
+  itemStyle: { color: '#fff' },
+  labelStyle: { color: '#fff' },
 };
 
 export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
@@ -190,7 +204,7 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
 
       {/* Charts Row */}
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Calories Chart */}
+        {/* Calories & Protein Chart - using ComposedChart with dual Y-axis */}
         <div className="lg:col-span-2 glass rounded-2xl p-6">
           <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
             <span>📈</span> Calories & Protein Trend
@@ -198,7 +212,7 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
           <div className="h-64">
             {calorieChartData.some((d) => d.calories > 0) ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={calorieChartData}>
+                <ComposedChart data={calorieChartData}>
                   <defs>
                     <linearGradient id="calorieGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor={COLORS.electric} stopOpacity={0.3} />
@@ -206,30 +220,45 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                  <XAxis dataKey="date" stroke="#666" fontSize={12} tickLine={false} />
-                  <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'rgba(15, 15, 26, 0.95)',
-                      border: '1px solid rgba(0, 255, 136, 0.3)',
-                      borderRadius: '8px',
-                    }}
+                  <XAxis dataKey="date" stroke="#666" fontSize={10} tickLine={false} />
+                  <YAxis 
+                    yAxisId="calories"
+                    stroke={COLORS.electric} 
+                    fontSize={11} 
+                    tickLine={false} 
+                    axisLine={false}
+                    label={{ value: 'Cal', angle: -90, position: 'insideLeft', fill: COLORS.electric, fontSize: 10 }}
                   />
+                  <YAxis 
+                    yAxisId="protein"
+                    orientation="right"
+                    stroke={COLORS.coral} 
+                    fontSize={11} 
+                    tickLine={false} 
+                    axisLine={false}
+                    label={{ value: 'Protein (g)', angle: 90, position: 'insideRight', fill: COLORS.coral, fontSize: 10 }}
+                  />
+                  <Tooltip {...tooltipStyle} />
+                  <Legend wrapperStyle={{ color: '#fff', fontSize: 12 }} />
                   <Area
+                    yAxisId="calories"
                     type="monotone"
                     dataKey="calories"
+                    name="Calories"
                     stroke={COLORS.electric}
                     fill="url(#calorieGradient)"
                     strokeWidth={2}
                   />
                   <Line
+                    yAxisId="protein"
                     type="monotone"
                     dataKey="protein"
+                    name="Protein (g)"
                     stroke={COLORS.coral}
-                    strokeWidth={2}
-                    dot={{ fill: COLORS.coral, strokeWidth: 0, r: 3 }}
+                    strokeWidth={3}
+                    dot={{ fill: COLORS.coral, strokeWidth: 0, r: 4 }}
                   />
-                </AreaChart>
+                </ComposedChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-gray-500">
@@ -260,18 +289,16 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
                     outerRadius={70}
                     paddingAngle={5}
                     dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}%`}
+                    labelLine={false}
                   >
                     {macroData.map((entry, index) => (
                       <Cell key={index} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      background: 'rgba(15, 15, 26, 0.95)',
-                      border: '1px solid rgba(0, 255, 136, 0.3)',
-                      borderRadius: '8px',
-                    }}
-                    formatter={(value: number) => `${value}%`}
+                  <Tooltip 
+                    {...tooltipStyle}
+                    formatter={(value: number, name: string) => [`${value}%`, name]}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -288,7 +315,7 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
                   className="w-3 h-3 rounded-full"
                   style={{ background: macro.color }}
                 />
-                <span className="text-xs text-gray-400">{macro.name}</span>
+                <span className="text-xs text-gray-400">{macro.name} ({macro.value}%)</span>
               </div>
             ))}
           </div>
@@ -314,11 +341,7 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
                   domain={['dataMin - 2', 'dataMax + 2']}
                 />
                 <Tooltip
-                  contentStyle={{
-                    background: 'rgba(15, 15, 26, 0.95)',
-                    border: '1px solid rgba(0, 212, 255, 0.3)',
-                    borderRadius: '8px',
-                  }}
+                  {...tooltipStyle}
                   formatter={(value: number) => [`${value} kg`, 'Weight']}
                 />
                 <Line
