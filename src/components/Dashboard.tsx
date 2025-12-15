@@ -139,13 +139,15 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
   const bmr = calculateBMR();
   const dailyTdee = userProfile ? bmr * (ACTIVITY_MULTIPLIERS[userProfile.activityLevel] || 1.55) : 0;
   
-  // Calculate TOTAL deficit for LOGGED days only
-  // Total Net = Total Intake - Total Burned from exercise
-  // Total TDEE = Daily TDEE × days with logged food
-  // Total Deficit = Total Net - Total TDEE (negative = deficit, positive = surplus)
-  const totalNetCalories = totalCalories - totalCaloriesBurned;
-  const totalTdee = dailyTdee * daysWithCalories; // Only count logged days
-  const totalDeficit = dailyTdee > 0 && daysWithCalories > 0 ? Math.round(totalNetCalories - totalTdee) : 0;
+  // Calculate TOTAL deficit for LOGGED days
+  // Formula: Deficit = Calories In - (TDEE + Workout Burned)
+  // TDEE already includes BMR + sedentary activity
+  // Workout burned is additional expenditure on top of TDEE
+  const totalTdee = dailyTdee * daysWithCalories; // TDEE for logged days
+  const totalExpenditure = totalTdee + totalCaloriesBurned; // Total burn = TDEE + exercise
+  const totalDeficit = dailyTdee > 0 && daysWithCalories > 0 
+    ? Math.round(totalCalories - totalExpenditure) // Intake - Expenditure
+    : 0;
   
   // Daily average for display
   const avgDailyDeficit = daysWithCalories > 0 ? Math.round(totalDeficit / daysWithCalories) : 0;
