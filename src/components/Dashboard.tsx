@@ -118,12 +118,11 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
   const avgCalories = daysWithCalories > 0 ? Math.round(totalCalories / daysWithCalories) : 0;
   const avgProtein = daysWithProtein > 0 ? Math.round(totalProtein / daysWithProtein) : 0;
 
-  // Calculate average calories burned from workouts
+  // Calculate total calories burned from workouts
   const totalCaloriesBurned = summaries.reduce((sum, s) => 
     sum + s.workoutEntries.reduce((ws, w) => ws + (w.caloriesBurned || 0), 0), 0
   );
-  const daysWithWorkouts = summaries.filter(s => s.workoutEntries.length > 0).length;
-  const avgCaloriesBurned = daysWithWorkouts > 0 ? Math.round(totalCaloriesBurned / daysWithWorkouts) : 0;
+  const avgCaloriesBurned = daysWithCalories > 0 ? Math.round(totalCaloriesBurned / daysWithCalories) : 0;
 
   // Get latest weight
   const latestWeight = weights.length > 0 ? weights[weights.length - 1].weight : 0;
@@ -138,10 +137,18 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
   };
   
   const bmr = calculateBMR();
-  const tdee = userProfile ? bmr * (ACTIVITY_MULTIPLIERS[userProfile.activityLevel] || 1.55) : 0;
-  // Deficit = Net Intake - TDEE (negative means deficit, positive means surplus)
-  const avgNetCalories = avgCalories - avgCaloriesBurned;
-  const avgDeficit = tdee > 0 && avgCalories > 0 ? Math.round(avgNetCalories - tdee) : 0;
+  const dailyTdee = userProfile ? bmr * (ACTIVITY_MULTIPLIERS[userProfile.activityLevel] || 1.55) : 0;
+  
+  // Calculate TOTAL deficit for the period (not average)
+  // Total Net = Total Intake - Total Burned from exercise
+  // Total TDEE = Daily TDEE × number of days with data
+  // Total Deficit = Total Net - Total TDEE
+  const totalNetCalories = totalCalories - totalCaloriesBurned;
+  const totalTdee = dailyTdee * daysWithCalories;
+  const totalDeficit = dailyTdee > 0 && daysWithCalories > 0 ? Math.round(totalNetCalories - totalTdee) : 0;
+  
+  // Also calculate daily average for display
+  const avgDailyDeficit = daysWithCalories > 0 ? Math.round(totalDeficit / daysWithCalories) : 0;
 
   const macroPercentages = getMacroPercentages(totalProtein, totalCarbs, totalFat);
   const macroData = [
@@ -218,16 +225,16 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
 
         <div className="glass rounded-2xl p-5 animate-slide-up stagger-3">
           <div className="flex items-center gap-3 mb-3">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${avgDeficit < 0 ? 'bg-electric/20' : 'bg-coral/20'}`}>
-              {avgDeficit < 0 ? '📉' : '📈'}
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${totalDeficit < 0 ? 'bg-electric/20' : 'bg-coral/20'}`}>
+              {totalDeficit < 0 ? '📉' : '📈'}
             </div>
-            <span className="text-gray-400 text-sm">Daily Balance</span>
+            <span className="text-gray-400 text-sm">{dateRange}D Deficit</span>
           </div>
-          <p className={`text-3xl font-bold font-mono ${avgDeficit < 0 ? 'text-electric' : 'text-coral'}`}>
-            {avgDeficit !== 0 ? avgDeficit.toLocaleString() : '--'}
+          <p className={`text-3xl font-bold font-mono ${totalDeficit < 0 ? 'text-electric' : 'text-coral'}`}>
+            {totalDeficit !== 0 ? totalDeficit.toLocaleString() : '--'}
           </p>
           <p className="text-xs text-gray-500 mt-1">
-            {avgDeficit < 0 ? 'cal deficit (losing)' : avgDeficit > 0 ? 'cal surplus (gaining)' : 'Set profile first'}
+            {totalDeficit !== 0 ? `${avgDailyDeficit}/day avg` : 'Set profile first'}
           </p>
         </div>
 
