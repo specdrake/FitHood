@@ -77,6 +77,9 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormState>(emptyForm);
   const [foodSuggestions, setFoodSuggestions] = useState<FoodItem[]>([]);
+  const [apiSuggestions, setApiSuggestions] = useState<FoodItem[]>([]);
+  const [isSearchingApi, setIsSearchingApi] = useState(false);
+  const [searchSource, setSearchSource] = useState<'local' | 'online'>('local');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   // Analysis date range
@@ -161,14 +164,43 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
     setShowForm(false);
     setEditingId(null);
     setFoodSuggestions([]);
+    setApiSuggestions([]);
   };
 
-  const handleFoodNameChange = (value: string) => {
+  const handleFoodNameChange = async (value: string) => {
     setFormData({ ...formData, name: value });
+    
     if (value.length >= 2) {
+      // Always search local database
       setFoodSuggestions(searchFoods(value));
+      
+      // Also search online if enabled
+      if (searchSource === 'online') {
+        setIsSearchingApi(true);
+        try {
+          const response = await fetch(`/api/food-search?q=${encodeURIComponent(value)}`);
+          const data = await response.json();
+          if (data.foods) {
+            setApiSuggestions(data.foods.map((f: { name: string; calories: number; protein: number; carbs: number; fat: number; serving?: string }) => ({
+              name: f.name,
+              calories: f.calories,
+              protein: f.protein,
+              carbs: f.carbs,
+              fat: f.fat,
+              category: 'cooked' as const,
+              servingSize: f.serving,
+            })));
+          }
+        } catch (error) {
+          console.error('API search error:', error);
+          setApiSuggestions([]);
+        } finally {
+          setIsSearchingApi(false);
+        }
+      }
     } else {
       setFoodSuggestions([]);
+      setApiSuggestions([]);
     }
   };
 
@@ -182,6 +214,7 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
       fat: String(food.fat),
     });
     setFoodSuggestions([]);
+    setApiSuggestions([]);
   };
 
   const quickAddFood = (food: FoodItem) => {
@@ -364,6 +397,30 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
             {/* Form */}
             {showForm && (
               <form onSubmit={handleSubmit} className="mb-6 p-4 rounded-xl bg-white/5 animate-slide-up">
+                {/* Search Source Toggle */}
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-xs text-gray-500">Search:</span>
+                  <button
+                    type="button"
+                    onClick={() => setSearchSource('local')}
+                    className={`px-3 py-1 rounded-full text-xs transition-all ${
+                      searchSource === 'local' ? 'bg-electric text-midnight' : 'bg-white/10 hover:bg-white/20'
+                    }`}
+                  >
+                    🇮🇳 NIN Database
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSearchSource('online')}
+                    className={`px-3 py-1 rounded-full text-xs transition-all ${
+                      searchSource === 'online' ? 'bg-coral text-midnight' : 'bg-white/10 hover:bg-white/20'
+                    }`}
+                  >
+                    🌐 Online (FatSecret)
+                  </button>
+                  {isSearchingApi && <span className="text-xs text-gray-500 animate-pulse">Searching...</span>}
+                </div>
+
                 <div className="grid grid-cols-2 md:grid-cols-7 gap-3 mb-4">
                   <div className="col-span-2 relative">
                     <label className="block text-xs text-gray-500 mb-1">Food name (type to search)</label>
@@ -377,19 +434,48 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                       autoComplete="off"
                     />
                     {/* Suggestions dropdown */}
-                    {foodSuggestions.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-midnight border border-white/20 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                        {foodSuggestions.map(food => (
-                          <button
-                            key={food.name}
-                            type="button"
-                            onClick={() => selectFoodSuggestion(food)}
-                            className="w-full px-3 py-2 text-left hover:bg-white/10 text-sm border-b border-white/5 last:border-0"
-                          >
-                            <span className="font-medium">{food.name}</span>
-                            <span className="text-gray-400 ml-2 text-xs">{food.calories} cal · {food.protein}g P</span>
-                          </button>
-                        ))}
+                    {(foodSuggestions.length > 0 || apiSuggestions.length > 0) && (
+                      <div className="absolute z-10 w-full mt-1 bg-midnight border border-white/20 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                        {/* Local NIN Results */}
+                        {foodSuggestions.length > 0 && (
+                          <>
+                            <div className="px-3 py-1.5 text-xs text-electric bg-electric/10 sticky top-0">
+                              🇮🇳 NIN Database ({foodSuggestions.length})
+                            </div>
+                            {foodSuggestions.slice(0, 8).map(food => (
+                              <button
+                                key={`local-${food.name}`}
+                                type="button"
+                                onClick={() => selectFoodSuggestion(food)}
+                                className="w-full px-3 py-2 text-left hover:bg-white/10 text-sm border-b border-white/5"
+                              >
+                                <span className="font-medium">{food.name}</span>
+                                <span className="text-gray-400 ml-2 text-xs">{food.calories} cal · {food.protein}g P</span>
+                                {food.servingSize && <span className="text-gray-500 ml-1 text-xs">({food.servingSize})</span>}
+                              </button>
+                            ))}
+                          </>
+                        )}
+                        {/* Online FatSecret Results */}
+                        {apiSuggestions.length > 0 && (
+                          <>
+                            <div className="px-3 py-1.5 text-xs text-coral bg-coral/10 sticky top-0">
+                              🌐 FatSecret ({apiSuggestions.length})
+                            </div>
+                            {apiSuggestions.map((food, i) => (
+                              <button
+                                key={`api-${i}-${food.name}`}
+                                type="button"
+                                onClick={() => selectFoodSuggestion(food)}
+                                className="w-full px-3 py-2 text-left hover:bg-white/10 text-sm border-b border-white/5"
+                              >
+                                <span className="font-medium">{food.name}</span>
+                                <span className="text-gray-400 ml-2 text-xs">{food.calories} cal · {food.protein}g P</span>
+                                {food.servingSize && <span className="text-gray-500 ml-1 text-xs">({food.servingSize})</span>}
+                              </button>
+                            ))}
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
