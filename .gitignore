@@ -40,3 +40,4 @@ coverage/
 
 # Secrets
 token
+.env.vercel

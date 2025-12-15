@@ -296,7 +296,7 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
                       <Cell key={index} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip 
+                  <Tooltip
                     {...tooltipStyle}
                     formatter={(value: number, name: string) => [`${value}%`, name]}
                   />

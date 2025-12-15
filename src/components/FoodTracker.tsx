@@ -60,6 +60,13 @@ const emptyForm: FormState = {
   mealType: 'snack',
 };
 
+// Get date string for N days ago
+const getDateNDaysAgo = (days: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return formatDate(d);
+};
+
 export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps) {
   const [foods, setFoods] = useState<FoodEntry[]>([]);
   const [contributions, setContributions] = useState<FoodContribution[]>([]);
@@ -72,6 +79,10 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
   const [foodSuggestions, setFoodSuggestions] = useState<FoodItem[]>([]);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  // Analysis date range
+  const [analysisRange, setAnalysisRange] = useState<'7' | '14' | '30' | 'all' | 'custom'>('30');
+  const [customStartDate, setCustomStartDate] = useState<string>(getDateNDaysAgo(30));
+  const [customEndDate, setCustomEndDate] = useState<string>(formatDate(new Date()));
 
   useEffect(() => {
     if (userId) {
@@ -615,19 +626,97 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
         </>
       )}
 
-      {viewMode === 'analysis' && (
+      {viewMode === 'analysis' && (() => {
+        // Filter foods by date range
+        const getFilteredFoods = () => {
+          if (analysisRange === 'all') return foods;
+          
+          let startDate: string;
+          let endDate = customEndDate;
+          
+          if (analysisRange === 'custom') {
+            startDate = customStartDate;
+          } else {
+            startDate = getDateNDaysAgo(parseInt(analysisRange));
+            endDate = formatDate(new Date());
+          }
+          
+          return foods.filter(f => f.date >= startDate && f.date <= endDate);
+        };
+        
+        const filteredFoods = getFilteredFoods();
+        const filteredContributions = calculateFoodContributions(filteredFoods);
+        const totalCals = filteredFoods.reduce((sum, f) => sum + f.calories * (f.count || 1), 0);
+        const totalProtein = filteredFoods.reduce((sum, f) => sum + f.protein * (f.count || 1), 0);
+        
+        return (
         <>
+          {/* Date Range Selector */}
+          <div className="glass rounded-2xl p-4 mb-6">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-gray-400 text-sm">📅 Date Range:</span>
+              {(['7', '14', '30', 'all'] as const).map((range) => (
+                <button
+                  key={range}
+                  onClick={() => setAnalysisRange(range)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    analysisRange === range
+                      ? 'bg-coral text-midnight'
+                      : 'bg-white/10 hover:bg-white/20'
+                  }`}
+                >
+                  {range === 'all' ? 'All Time' : `${range}D`}
+                </button>
+              ))}
+              <button
+                onClick={() => setAnalysisRange('custom')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  analysisRange === 'custom'
+                    ? 'bg-coral text-midnight'
+                    : 'bg-white/10 hover:bg-white/20'
+                }`}
+              >
+                Custom
+              </button>
+              
+              {analysisRange === 'custom' && (
+                <div className="flex items-center gap-2 ml-2">
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="px-2 py-1 rounded bg-midnight border border-white/20 text-sm"
+                  />
+                  <span className="text-gray-500">to</span>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="px-2 py-1 rounded bg-midnight border border-white/20 text-sm"
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex gap-4 mt-3 text-sm">
+              <span className="text-gray-400">
+                📊 {filteredFoods.length} entries | 
+                🔥 {totalCals.toLocaleString()} cal | 
+                🥩 {totalProtein}g protein
+              </span>
+            </div>
+          </div>
+
           {/* Food Contribution Analysis */}
           <div className="grid lg:grid-cols-2 gap-6">
             {/* Top Foods Chart */}
             <div className="glass rounded-2xl p-6">
               <h3 className="font-semibold text-lg mb-4">🏆 Top Calorie Sources</h3>
               <div className="h-64">
-                {contributions.length > 0 ? (
+                {filteredContributions.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={contributions.slice(0, 8)}
+                        data={filteredContributions.slice(0, 8)}
                         cx="50%"
                         cy="50%"
                         innerRadius={50}
@@ -636,7 +725,7 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                         dataKey="totalCalories"
                         nameKey="name"
                       >
-                        {contributions.slice(0, 8).map((_, index) => (
+                        {filteredContributions.slice(0, 8).map((_, index) => (
                           <Cell key={index} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
@@ -648,12 +737,12 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                   </ResponsiveContainer>
                 ) : (
                   <div className="h-full flex items-center justify-center text-gray-500">
-                    <p>No data yet</p>
+                    <p>No data for selected range</p>
                   </div>
                 )}
               </div>
               <div className="flex flex-wrap justify-center gap-2 mt-2">
-                {contributions.slice(0, 8).map((food, i) => (
+                {filteredContributions.slice(0, 8).map((food, i) => (
                   <div key={food.name} className="flex items-center gap-1 text-xs">
                     <div
                       className="w-2 h-2 rounded-full"
@@ -669,7 +758,7 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
             <div className="glass rounded-2xl p-6">
               <h3 className="font-semibold text-lg mb-4">📋 Food Breakdown</h3>
               <div className="space-y-3 max-h-80 overflow-y-auto">
-                {contributions.slice(0, 15).map((food, i) => (
+                {filteredContributions.slice(0, 15).map((food, i) => (
                   <div key={food.name} className="flex items-center gap-3">
                     <span className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs font-mono">
                       {i + 1}
@@ -698,14 +787,15 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                     </div>
                   </div>
                 ))}
-                {contributions.length === 0 && (
-                  <p className="text-center text-gray-500 py-4">No data yet</p>
+                {filteredContributions.length === 0 && (
+                  <p className="text-center text-gray-500 py-4">No data for selected range</p>
                 )}
               </div>
             </div>
           </div>
         </>
-      )}
+        );
+      })()}
 
       {viewMode === 'all' && (
         /* All Foods View */

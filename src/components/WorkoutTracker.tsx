@@ -147,9 +147,9 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
       const entry: WorkoutEntry = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         ...workoutData,
-        timestamp: new Date().toISOString(),
-      };
-      await addWorkoutEntries(userId, [entry]);
+      timestamp: new Date().toISOString(),
+    };
+    await addWorkoutEntries(userId, [entry]);
     }
 
     setFormData(emptyForm);
@@ -230,7 +230,7 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
     const withCalories = catWorkouts.filter(w => w.caloriesBurned && w.caloriesBurned > 0);
     const withDistance = catWorkouts.filter(w => w.distance && w.distance > 0);
     return {
-      category: cat,
+    category: cat,
       count: catWorkouts.length,
       totalCalories: catWorkouts.reduce((sum, w) => sum + (w.caloriesBurned || 0), 0),
       avgCalories: withCalories.length > 0 
@@ -240,8 +240,8 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
       avgDistance: withDistance.length > 0
         ? (withDistance.reduce((sum, w) => sum + (w.distance || 0), 0) / withDistance.length).toFixed(1)
         : 0,
-      color: CATEGORY_COLORS[cat],
-      icon: CATEGORY_ICONS[cat],
+    color: CATEGORY_COLORS[cat],
+    icon: CATEGORY_ICONS[cat],
     };
   });
 
@@ -297,12 +297,12 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
                   {cat.count}
                 </p>
                 <div className="text-xs text-gray-500 mt-1 space-y-0.5">
-                  {cat.totalCalories > 0 && (
+                {cat.totalCalories > 0 && (
                     <p>🔥 {cat.totalCalories} cal total</p>
                   )}
                   {cat.totalDistance > 0 && (
                     <p>📍 {cat.totalDistance.toFixed(1)} km total</p>
-                  )}
+                )}
                 </div>
               </div>
             ))}
@@ -349,12 +349,12 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
                 </div>
               </div>
               {!showForm && (
-                <button
+              <button
                   onClick={() => setShowForm(true)}
-                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-neon-cyan to-electric text-midnight font-semibold hover:glow-sm transition-all text-sm"
-                >
+                className="px-4 py-2 rounded-lg bg-gradient-to-r from-neon-cyan to-electric text-midnight font-semibold hover:glow-sm transition-all text-sm"
+              >
                   + Add Workout
-                </button>
+              </button>
               )}
             </div>
 
@@ -375,57 +375,57 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Category</label>
-                    <select
+                  <select
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value as WorkoutEntry['category'] })}
                       className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
-                    >
-                      <option value="strength">🏋️ Strength</option>
-                      <option value="cardio">🏃 Cardio</option>
-                      <option value="flexibility">🧘 Flexibility</option>
-                      <option value="other">⚡ Other</option>
-                    </select>
+                  >
+                    <option value="strength">🏋️ Strength</option>
+                    <option value="cardio">🏃 Cardio</option>
+                    <option value="flexibility">🧘 Flexibility</option>
+                    <option value="other">⚡ Other</option>
+                  </select>
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Sets</label>
-                    <input
-                      type="number"
+                  <input
+                    type="number"
                       value={formData.sets}
                       onChange={(e) => setFormData({ ...formData, sets: e.target.value })}
                       placeholder="0"
-                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
-                    />
+                    className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
+                  />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Reps</label>
-                    <input
-                      type="number"
+                  <input
+                    type="number"
                       value={formData.reps}
                       onChange={(e) => setFormData({ ...formData, reps: e.target.value })}
                       placeholder="0"
-                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
-                    />
+                    className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
+                  />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Weight (kg)</label>
-                    <input
-                      type="number"
+                  <input
+                    type="number"
                       step="0.5"
                       value={formData.weight}
                       onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
                       placeholder="0"
-                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
-                    />
+                    className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
+                  />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Duration (min)</label>
-                    <input
-                      type="number"
+                  <input
+                    type="number"
                       value={formData.duration}
                       onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                       placeholder="0"
-                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
-                    />
+                    className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
+                  />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Distance (km)</label>
@@ -440,13 +440,13 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">🔥 Calories</label>
-                    <input
-                      type="number"
+                  <input
+                    type="number"
                       value={formData.caloriesBurned}
                       onChange={(e) => setFormData({ ...formData, caloriesBurned: e.target.value })}
                       placeholder="0"
-                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
-                    />
+                    className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
+                  />
                   </div>
                 </div>
                 <div className="flex gap-3">
@@ -552,38 +552,38 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
           {dailyWorkouts.length > 0 && (
             <>
               {/* Workout Frequency by Category */}
-              <div className="glass rounded-2xl p-6">
+            <div className="glass rounded-2xl p-6">
                 <h3 className="font-semibold text-lg mb-4">💪 Workout Frequency (Last 14 Days)</h3>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dailyWorkouts}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                      <XAxis dataKey="date" stroke="#666" fontSize={10} tickLine={false} />
-                      <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dailyWorkouts}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                    <XAxis dataKey="date" stroke="#666" fontSize={10} tickLine={false} />
+                    <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
                       <Tooltip {...tooltipStyle} />
                       <Legend wrapperStyle={{ color: '#fff', fontSize: 12 }} />
-                      <Bar
-                        dataKey="strength"
+                    <Bar
+                      dataKey="strength"
                         name="Strength"
-                        stackId="a"
-                        fill={CATEGORY_COLORS.strength}
-                        radius={[0, 0, 0, 0]}
-                        onClick={(data) => setSelectedDate(data.fullDate)}
-                        cursor="pointer"
-                      />
-                      <Bar
-                        dataKey="cardio"
+                      stackId="a"
+                      fill={CATEGORY_COLORS.strength}
+                      radius={[0, 0, 0, 0]}
+                      onClick={(data) => setSelectedDate(data.fullDate)}
+                      cursor="pointer"
+                    />
+                    <Bar
+                      dataKey="cardio"
                         name="Cardio"
-                        stackId="a"
-                        fill={CATEGORY_COLORS.cardio}
-                        radius={[4, 4, 0, 0]}
-                        onClick={(data) => setSelectedDate(data.fullDate)}
-                        cursor="pointer"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                      stackId="a"
+                      fill={CATEGORY_COLORS.cardio}
+                      radius={[4, 4, 0, 0]}
+                      onClick={(data) => setSelectedDate(data.fullDate)}
+                      cursor="pointer"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
+            </div>
 
               {/* Calories Burned Trend */}
               {dailyWorkouts.some(d => d.calories > 0) && (
@@ -679,12 +679,12 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
                         <p className="text-xs text-gray-500">times</p>
                       </div>
                       {stats.setsCount > 0 && (
-                        <div>
+                      <div>
                           <p className="text-xl font-bold text-coral font-mono">
                             {Math.round(stats.totalSets / stats.setsCount)}
                           </p>
                           <p className="text-xs text-gray-500">avg sets</p>
-                        </div>
+                      </div>
                       )}
                       {stats.maxWeight > 0 && (
                         <div>

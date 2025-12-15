@@ -21,7 +21,7 @@ export async function addFoodEntries(userId: string, entries: FoodEntry[]): Prom
 
   const { error } = await supabase.from('foods').insert(rows);
   if (error) throw error;
-}
+          }
 
 export async function updateFoodEntry(id: string, entry: Partial<FoodEntry>): Promise<void> {
   const supabase = getSupabase();
@@ -175,7 +175,7 @@ export async function deleteWorkoutEntry(id: string): Promise<void> {
 
 export async function updateWorkoutEntry(id: string, entry: Partial<WorkoutEntry>): Promise<void> {
   const supabase = getSupabase();
-  
+
   // Build update object with all provided fields
   const updates: Record<string, unknown> = {
     date: entry.date,
