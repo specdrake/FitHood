@@ -17,10 +17,18 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import { getFoodsByDateRange, getWorkoutsByDateRange, getAllWeights } from '@/lib/db';
-import { FoodEntry, WorkoutEntry, WeightEntry, DailySummary } from '@/lib/types';
+import { getFoodsByDateRange, getWorkoutsByDateRange, getAllWeights, getUserProfile } from '@/lib/db';
+import { FoodEntry, WorkoutEntry, WeightEntry, DailySummary, UserProfile } from '@/lib/types';
 import { formatDisplayDate, getDateRange, groupByDate, calculateDailySummary, getMacroPercentages } from '@/lib/utils';
 import HealthCalculator from './HealthCalculator';
+
+const ACTIVITY_MULTIPLIERS: Record<string, number> = {
+  sedentary: 1.2,
+  light: 1.375,
+  moderate: 1.55,
+  active: 1.725,
+  veryActive: 1.9,
+};
 
 interface DashboardProps {
   userId: string;
@@ -49,6 +57,7 @@ const tooltipStyle = {
 export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
   const [summaries, setSummaries] = useState<DailySummary[]>([]);
   const [weights, setWeights] = useState<WeightEntry[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [dateRange, setDateRange] = useState(7);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -62,10 +71,11 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
     setIsLoading(true);
     try {
       const { startDate, endDate } = getDateRange(dateRange);
-      const [foods, workouts, weightData] = await Promise.all([
+      const [foods, workouts, weightData, profile] = await Promise.all([
         getFoodsByDateRange(userId, startDate, endDate),
         getWorkoutsByDateRange(userId, startDate, endDate),
         getAllWeights(userId),
+        getUserProfile(userId),
       ]);
 
       const foodsByDate = groupByDate(foods);
@@ -89,6 +99,7 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
 
       setSummaries(summaryList);
       setWeights(weightData.sort((a, b) => a.date.localeCompare(b.date)));
+      setUserProfile(profile);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -116,6 +127,19 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
 
   // Get latest weight
   const latestWeight = weights.length > 0 ? weights[weights.length - 1].weight : 0;
+
+  // Calculate TDEE and deficit
+  const calculateBMR = () => {
+    if (latestWeight <= 0 || !userProfile) return 0;
+    if (userProfile.gender === 'male') {
+      return 10 * latestWeight + 6.25 * userProfile.height - 5 * userProfile.age + 5;
+    }
+    return 10 * latestWeight + 6.25 * userProfile.height - 5 * userProfile.age - 161;
+  };
+  
+  const bmr = calculateBMR();
+  const tdee = userProfile ? bmr * (ACTIVITY_MULTIPLIERS[userProfile.activityLevel] || 1.55) : 0;
+  const avgDeficit = tdee > 0 && avgCalories > 0 ? Math.round(tdee - avgCalories + avgCaloriesBurned) : 0;
 
   const macroPercentages = getMacroPercentages(totalProtein, totalCarbs, totalFat);
   const macroData = [
@@ -192,12 +216,17 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
 
         <div className="glass rounded-2xl p-5 animate-slide-up stagger-3">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-glow/20 flex items-center justify-center text-xl">
-              📊
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${avgDeficit > 0 ? 'bg-electric/20' : 'bg-coral/20'}`}>
+              {avgDeficit > 0 ? '📉' : '📈'}
             </div>
-            <span className="text-gray-400 text-sm">Total Calories</span>
+            <span className="text-gray-400 text-sm">Avg Deficit</span>
           </div>
-          <p className="text-3xl font-bold text-amber-glow font-mono">{totalCalories.toLocaleString()}</p>
+          <p className={`text-3xl font-bold font-mono ${avgDeficit > 0 ? 'text-electric' : 'text-coral'}`}>
+            {avgDeficit !== 0 ? `${avgDeficit > 0 ? '+' : ''}${avgDeficit}` : '--'}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {avgDeficit > 0 ? 'cal/day deficit' : avgDeficit < 0 ? 'cal/day surplus' : 'Set profile first'}
+          </p>
         </div>
 
         <div className="glass rounded-2xl p-5 animate-slide-up stagger-4">
@@ -296,11 +325,11 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
                     data={macroData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={40}
-                    outerRadius={70}
+                    innerRadius={35}
+                    outerRadius={60}
                     paddingAngle={5}
                     dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}%`}
+                    label={({ value }) => `${value}%`}
                     labelLine={false}
                   >
                     {macroData.map((entry, index) => (
@@ -319,14 +348,17 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
               </div>
             )}
           </div>
-          <div className="flex justify-center gap-4 mt-2">
+          <div className="flex justify-center gap-6 mt-3">
             {macroData.map((macro) => (
               <div key={macro.name} className="flex items-center gap-2">
                 <div
-                  className="w-3 h-3 rounded-full"
+                  className="w-4 h-4 rounded-full"
                   style={{ background: macro.color }}
                 />
-                <span className="text-xs text-gray-400">{macro.name} ({macro.value}%)</span>
+                <span className="text-sm font-medium" style={{ color: macro.color }}>
+                  {macro.name}
+                </span>
+                <span className="text-sm text-gray-400">({macro.value}%)</span>
               </div>
             ))}
           </div>
