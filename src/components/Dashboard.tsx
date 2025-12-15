@@ -230,13 +230,15 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${totalDeficit < 0 ? 'bg-electric/20' : 'bg-coral/20'}`}>
               {totalDeficit < 0 ? '📉' : '📈'}
             </div>
-            <span className="text-gray-400 text-sm">{daysWithCalories}D Deficit</span>
+            <span className="text-gray-400 text-sm">{daysWithCalories}/{dateRange}D Deficit</span>
           </div>
           <p className={`text-3xl font-bold font-mono ${totalDeficit < 0 ? 'text-electric' : 'text-coral'}`}>
             {totalDeficit !== 0 ? totalDeficit.toLocaleString() : '--'}
           </p>
           <p className="text-xs text-gray-500 mt-1">
-            {totalDeficit !== 0 ? `${avgDailyDeficit}/day avg` : 'Set profile first'}
+            {totalDeficit !== 0 ? (
+              <>In: {totalCalories.toLocaleString()} - Out: {Math.round(totalExpenditure).toLocaleString()} (TDEE:{Math.round(totalTdee)} + Burn:{totalCaloriesBurned})</>
+            ) : 'Set profile first'}
           </p>
         </div>
 
