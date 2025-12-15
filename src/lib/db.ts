@@ -305,3 +305,56 @@ function mapWeightRow(row: Record<string, unknown>): WeightEntry {
     notes: row.notes as string | undefined,
   };
 }
+
+// User Profile operations
+import { UserProfile } from './types';
+
+export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  const supabase = getSupabase();
+  
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null; // No rows found
+    console.error('Get profile error:', error);
+    return null;
+  }
+
+  return {
+    height: data.height as number,
+    age: data.age as number,
+    gender: data.gender as 'male' | 'female',
+    activityLevel: data.activity_level as UserProfile['activityLevel'],
+    goalWeight: data.goal_weight as number | undefined,
+    weeklyGoal: data.weekly_goal as number | undefined,
+  };
+}
+
+export async function saveUserProfile(userId: string, profile: UserProfile): Promise<void> {
+  const supabase = getSupabase();
+  
+  const row = {
+    user_id: userId,
+    height: profile.height,
+    age: profile.age,
+    gender: profile.gender,
+    activity_level: profile.activityLevel,
+    goal_weight: profile.goalWeight,
+    weekly_goal: profile.weeklyGoal,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Try to update first, if no rows affected then insert
+  const { error: updateError } = await supabase
+    .from('user_profiles')
+    .upsert(row, { onConflict: 'user_id' });
+
+  if (updateError) {
+    console.error('Save profile error:', updateError);
+    throw updateError;
+  }
+}

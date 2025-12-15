@@ -402,6 +402,7 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
 
       {/* BMI/BMR Calculator & Deficit Tracker */}
       <HealthCalculator 
+        userId={userId}
         currentWeight={latestWeight}
         avgDailyCalories={avgCalories}
         avgDailyBurned={avgCaloriesBurned}

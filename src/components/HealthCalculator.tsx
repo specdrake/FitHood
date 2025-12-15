@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { UserProfile } from '@/lib/types';
+import { getUserProfile, saveUserProfile } from '@/lib/db';
 
 interface HealthCalculatorProps {
+  userId: string;
   currentWeight: number; // kg
   avgDailyCalories: number;
   avgDailyBurned: number;
@@ -28,7 +30,7 @@ const ACTIVITY_LABELS = {
 // 1 kg of fat ≈ 7700 calories
 const CALORIES_PER_KG = 7700;
 
-export default function HealthCalculator({ currentWeight, avgDailyCalories, avgDailyBurned }: HealthCalculatorProps) {
+export default function HealthCalculator({ userId, currentWeight, avgDailyCalories, avgDailyBurned }: HealthCalculatorProps) {
   const [profile, setProfile] = useState<UserProfile>({
     height: 170,
     age: 25,
@@ -39,23 +41,40 @@ export default function HealthCalculator({ currentWeight, avgDailyCalories, avgD
   });
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load profile from localStorage
+  // Load profile from database
   useEffect(() => {
-    const saved = localStorage.getItem('userProfile');
-    if (saved) {
+    const loadProfile = async () => {
+      if (!userId) return;
+      setIsLoading(true);
       try {
-        setProfile(JSON.parse(saved));
+        const saved = await getUserProfile(userId);
+        if (saved) {
+          setProfile(saved);
+        }
       } catch (e) {
-        console.error('Failed to parse user profile:', e);
+        console.error('Failed to load user profile:', e);
+      } finally {
+        setIsLoading(false);
       }
-    }
-  }, []);
+    };
+    loadProfile();
+  }, [userId]);
 
-  // Save profile to localStorage
-  const saveProfile = () => {
-    localStorage.setItem('userProfile', JSON.stringify(profile));
-    setIsEditing(false);
+  // Save profile to database
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    try {
+      await saveUserProfile(userId, profile);
+      setIsEditing(false);
+    } catch (e) {
+      console.error('Failed to save profile:', e);
+      alert('Failed to save profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Calculate BMI
@@ -106,17 +125,28 @@ export default function HealthCalculator({ currentWeight, avgDailyCalories, avgD
 
   const bmiCategory = getBmiCategory(bmi);
 
+  if (isLoading) {
+    return (
+      <div className="glass rounded-2xl p-5 animate-slide-up">
+        <div className="flex items-center justify-center h-32">
+          <div className="w-8 h-8 border-3 border-electric/30 border-t-electric rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="glass rounded-2xl p-5 animate-slide-up">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-display text-xl">Health Calculator</h3>
         <button
-          onClick={() => isEditing ? saveProfile() : setIsEditing(true)}
+          onClick={() => isEditing ? handleSaveProfile() : setIsEditing(true)}
+          disabled={isSaving}
           className={`px-3 py-1 rounded-lg text-sm ${
             isEditing ? 'bg-electric text-midnight' : 'bg-white/10 hover:bg-white/20'
-          }`}
+          } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
-          {isEditing ? 'Save' : 'Edit Profile'}
+          {isSaving ? 'Saving...' : isEditing ? 'Save' : 'Edit Profile'}
         </button>
       </div>
 
