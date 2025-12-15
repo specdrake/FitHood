@@ -139,16 +139,16 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
   const bmr = calculateBMR();
   const dailyTdee = userProfile ? bmr * (ACTIVITY_MULTIPLIERS[userProfile.activityLevel] || 1.55) : 0;
   
-  // Calculate TOTAL deficit for the period
+  // Calculate TOTAL deficit for LOGGED days only
   // Total Net = Total Intake - Total Burned from exercise
-  // Total TDEE = Daily TDEE × dateRange (full period, not just logged days)
+  // Total TDEE = Daily TDEE × days with logged food
   // Total Deficit = Total Net - Total TDEE (negative = deficit, positive = surplus)
   const totalNetCalories = totalCalories - totalCaloriesBurned;
-  const totalTdee = dailyTdee * dateRange; // Use full period, not daysWithCalories
+  const totalTdee = dailyTdee * daysWithCalories; // Only count logged days
   const totalDeficit = dailyTdee > 0 && daysWithCalories > 0 ? Math.round(totalNetCalories - totalTdee) : 0;
   
   // Daily average for display
-  const avgDailyDeficit = dateRange > 0 ? Math.round(totalDeficit / dateRange) : 0;
+  const avgDailyDeficit = daysWithCalories > 0 ? Math.round(totalDeficit / daysWithCalories) : 0;
 
   const macroPercentages = getMacroPercentages(totalProtein, totalCarbs, totalFat);
   const macroData = [
@@ -228,7 +228,7 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${totalDeficit < 0 ? 'bg-electric/20' : 'bg-coral/20'}`}>
               {totalDeficit < 0 ? '📉' : '📈'}
             </div>
-            <span className="text-gray-400 text-sm">{dateRange}D Deficit</span>
+            <span className="text-gray-400 text-sm">{daysWithCalories}D Deficit</span>
           </div>
           <p className={`text-3xl font-bold font-mono ${totalDeficit < 0 ? 'text-electric' : 'text-coral'}`}>
             {totalDeficit !== 0 ? totalDeficit.toLocaleString() : '--'}
