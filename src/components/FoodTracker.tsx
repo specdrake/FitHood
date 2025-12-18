@@ -384,28 +384,28 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
 
           {/* Add/Edit Food Form */}
           <div className="glass rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <h3 className="font-semibold text-lg flex items-center gap-2">
-                <span>🍽️</span> {formatDisplayDate(selectedDate)}
+                <span>🍽️</span> <span className="hidden sm:inline">{formatDisplayDate(selectedDate)}</span><span className="sm:hidden">{new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
               </h3>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {!showForm && !showQuickAdd && (
                   <>
                     <button
                       onClick={() => setShowQuickAdd(true)}
-                      className="px-4 py-2 rounded-lg glass hover:bg-white/10 text-sm"
+                      className="px-3 sm:px-4 py-2 rounded-lg glass hover:bg-white/10 text-sm whitespace-nowrap"
                     >
-                      📋 Quick Add
+                      📋 <span className="hidden sm:inline">Quick Add</span><span className="sm:hidden">Quick</span>
                     </button>
                     <button
                       onClick={() => setShowForm(true)}
-                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-coral to-amber-glow text-midnight font-semibold hover:glow-sm transition-all text-sm"
+                      className="px-3 sm:px-4 py-2 rounded-lg bg-gradient-to-r from-coral to-amber-glow text-midnight font-semibold hover:glow-sm transition-all text-sm whitespace-nowrap"
                     >
-                      + Custom
+                      + <span className="hidden sm:inline">Custom</span><span className="sm:hidden">Add</span>
                     </button>
                     <button
                       onClick={() => handleToggleDayComplete(!isDayComplete)}
-                      className={`px-4 py-2 rounded-lg text-sm flex items-center gap-2 ${
+                      className={`px-3 sm:px-4 py-2 rounded-lg text-sm flex items-center gap-2 whitespace-nowrap ${
                         isDayComplete 
                           ? 'bg-electric/20 text-electric border border-electric/30' 
                           : 'glass hover:bg-white/10'
@@ -418,7 +418,7 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                         className="w-4 h-4 rounded border-gray-600 bg-midnight text-electric focus:ring-electric cursor-pointer"
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <span>Day Done</span>
+                      <span className="hidden sm:inline">Day Done</span><span className="sm:hidden">Done</span>
                     </button>
                   </>
                 )}
@@ -474,40 +474,40 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
 
             {/* Form */}
             {showForm && (
-              <form onSubmit={handleSubmit} className="mb-6 p-4 rounded-xl bg-white/5 animate-slide-up">
+              <form onSubmit={handleSubmit} className="mb-6 p-3 sm:p-4 rounded-xl bg-white/5 animate-slide-up">
                 {/* Search Source Toggle */}
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-xs text-gray-500">Search:</span>
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <span className="text-xs text-gray-500 shrink-0">Search:</span>
                   <button
                     type="button"
                     onClick={() => setSearchSource('local')}
-                    className={`px-3 py-1 rounded-full text-xs transition-all ${
+                    className={`px-2 sm:px-3 py-1 rounded-full text-xs transition-all shrink-0 ${
                       searchSource === 'local' ? 'bg-electric text-midnight' : 'bg-white/10 hover:bg-white/20'
                     }`}
                   >
-                    🇮🇳 NIN Database
+                    🇮🇳 NIN
                   </button>
                   <button
                     type="button"
                     onClick={() => setSearchSource('online')}
-                    className={`px-3 py-1 rounded-full text-xs transition-all ${
+                    className={`px-2 sm:px-3 py-1 rounded-full text-xs transition-all shrink-0 ${
                       searchSource === 'online' ? 'bg-coral text-midnight' : 'bg-white/10 hover:bg-white/20'
                     }`}
                   >
-                    🌐 Online (FatSecret)
+                    🌐 Online
                   </button>
                   {isSearchingApi && <span className="text-xs text-gray-500 animate-pulse">Searching...</span>}
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-7 gap-3 mb-4">
-                  <div className="col-span-2 relative">
-                    <label className="block text-xs text-gray-500 mb-1">Food name (type to search)</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3 mb-4">
+                  <div className="sm:col-span-2 lg:col-span-2 relative">
+                    <label className="block text-xs text-gray-500 mb-1 font-medium">Food name</label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => handleFoodNameChange(e.target.value)}
-                      placeholder="e.g., Chicken breast, Roti..."
-                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
+                      placeholder="Search food..."
+                      className="w-full px-3 py-2.5 sm:py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
                       required
                       autoComplete="off"
                     />
@@ -558,7 +558,7 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                     )}
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Servings</label>
+                    <label className="block text-xs text-gray-500 mb-1 font-medium">Servings</label>
                     <input
                       type="number"
                       step="any"
@@ -566,82 +566,84 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                       onChange={(e) => setFormData({ ...formData, count: e.target.value })}
                       placeholder="1"
                       min="0.01"
-                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
+                      className="w-full px-3 py-2.5 sm:py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Cal/unit</label>
+                    <label className="block text-xs text-gray-500 mb-1 font-medium">Calories</label>
                     <input
                       type="number"
                       value={formData.calories}
                       onChange={(e) => setFormData({ ...formData, calories: e.target.value })}
                       placeholder="0"
-                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
+                      className="w-full px-3 py-2.5 sm:py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Protein (g)</label>
+                    <label className="block text-xs text-gray-500 mb-1 font-medium">Protein</label>
                     <input
                       type="number"
                       value={formData.protein}
                       onChange={(e) => setFormData({ ...formData, protein: e.target.value })}
-                      placeholder="0"
-                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
+                      placeholder="0g"
+                      className="w-full px-3 py-2.5 sm:py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Carbs (g)</label>
+                    <label className="block text-xs text-gray-500 mb-1 font-medium">Carbs</label>
                     <input
                       type="number"
                       value={formData.carbs}
                       onChange={(e) => setFormData({ ...formData, carbs: e.target.value })}
-                      placeholder="0"
-                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
+                      placeholder="0g"
+                      className="w-full px-3 py-2.5 sm:py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Fat (g)</label>
+                    <label className="block text-xs text-gray-500 mb-1 font-medium">Fat</label>
                     <input
                       type="number"
                       value={formData.fat}
                       onChange={(e) => setFormData({ ...formData, fat: e.target.value })}
-                      placeholder="0"
-                      className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
+                      placeholder="0g"
+                      className="w-full px-3 py-2.5 sm:py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
                     />
                   </div>
                 </div>
                 {/* Show total preview */}
-                {(parseFloat(formData.calories) > 0 && parseInt(formData.count) > 1) && (
-                  <div className="mb-4 p-2 rounded-lg bg-electric/10 text-electric text-sm">
-                    Total: {(parseFloat(formData.calories) || 0) * (parseInt(formData.count) || 1)} cal 
-                    ({formData.count} × {formData.calories} cal)
+                {(parseFloat(formData.calories) > 0 && parseFloat(formData.count) > 1) && (
+                  <div className="mb-4 p-2.5 rounded-lg bg-electric/10 text-electric text-sm font-medium">
+                    Total: {Math.round((parseFloat(formData.calories) || 0) * (parseFloat(formData.count) || 1))} cal 
+                    <span className="text-xs ml-1">({formData.count} × {formData.calories})</span>
                   </div>
                 )}
-                <div className="flex gap-3 items-center">
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                   <select
                     value={formData.mealType}
                     onChange={(e) => setFormData({ ...formData, mealType: e.target.value as FormState['mealType'] })}
-                    className="px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
+                    className="px-3 py-2.5 sm:py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm flex-1 sm:flex-none"
                   >
                     <option value="breakfast">🌅 Breakfast</option>
                     <option value="lunch">☀️ Lunch</option>
                     <option value="dinner">🌙 Dinner</option>
                     <option value="snack">🍿 Snack</option>
                   </select>
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="px-4 py-2 rounded-lg border border-gray-600 text-gray-400 hover:bg-white/5 transition-all text-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-2 rounded-lg bg-coral text-midnight font-semibold hover:bg-coral/80 transition-all text-sm"
-                  >
-                    {editingId ? 'Update' : 'Add'} Food
-                  </button>
+                  <div className="flex gap-3 flex-1 sm:flex-none">
+                    <button
+                      type="button"
+                      onClick={handleCancel}
+                      className="flex-1 sm:flex-none px-4 py-2.5 sm:py-2 rounded-lg border border-gray-600 text-gray-400 hover:bg-white/5 transition-all text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 sm:flex-none px-6 py-2.5 sm:py-2 rounded-lg bg-gradient-to-r from-coral to-amber-glow text-midnight font-semibold hover:glow-sm transition-all text-sm"
+                    >
+                      {editingId ? 'Update' : 'Add'}
+                    </button>
+                  </div>
                 </div>
               </form>
             )}
