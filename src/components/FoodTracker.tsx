@@ -83,6 +83,7 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isDayComplete, setIsDayComplete] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   // Analysis date range
   const [analysisRange, setAnalysisRange] = useState<'7' | '14' | '30' | 'all' | 'custom'>('30');
   const [customStartDate, setCustomStartDate] = useState<string>(getDateNDaysAgo(30));
@@ -94,6 +95,15 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
       loadDayCompletion();
     }
   }, [userId, refreshTrigger, selectedDate]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setOpenMenuId(null);
+    if (openMenuId) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [openMenuId]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -139,10 +149,21 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
     if (confirm('Delete this food entry?')) {
       await deleteFoodEntry(id);
       loadData();
+      setOpenMenuId(null);
+    }
+  };
+
+  const handleDeleteAllDay = async () => {
+    if (confirm(`Delete all ${selectedFoods.length} food entries for ${formatDisplayDate(selectedDate)}?`)) {
+      for (const food of selectedFoods) {
+        await deleteFoodEntry(food.id);
+      }
+      loadData();
     }
   };
 
   const handleEdit = (food: FoodEntry) => {
+    setOpenMenuId(null);
     setEditingId(food.id);
     setFormData({
       name: food.name,
@@ -630,6 +651,15 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                     <option value="snack">🍿 Snack</option>
                   </select>
                   <div className="flex gap-3 flex-1 sm:flex-none">
+                    {editingId && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(editingId)}
+                        className="flex-1 sm:flex-none px-4 py-2.5 sm:py-2 rounded-lg border border-coral/30 text-coral hover:bg-coral/10 transition-all text-sm font-medium"
+                      >
+                        Delete
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={handleCancel}
@@ -654,50 +684,71 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                 {selectedFoods.map((food) => (
                   <div
                     key={food.id}
-                    className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all group"
+                    className="relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-3 sm:p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{food.name}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-sm sm:text-base truncate">{food.name}</p>
                         {(food.count || 1) > 1 && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-electric/20 text-electric">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-electric/20 text-electric shrink-0">
                             ×{food.count}
                           </span>
                         )}
+                        {food.mealType && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-coral/20 text-coral capitalize shrink-0">
+                            {food.mealType}
+                          </span>
+                        )}
                       </div>
-                      {food.mealType && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-coral/20 text-coral capitalize">
-                          {food.mealType}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm font-mono mt-1 flex-wrap">
+                        <span className="text-electric">{getTotalCalories(food)} cal</span>
+                        <span className="text-coral">{getTotalProtein(food).toFixed(1)}g P</span>
+                        <span className="text-amber-glow hidden sm:inline">{getTotalCarbs(food).toFixed(1)}g C</span>
+                        <span className="text-neon-cyan hidden sm:inline">{getTotalFat(food).toFixed(1)}g F</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 text-sm font-mono">
-                      <span className="text-electric">{getTotalCalories(food)} cal</span>
-                      <span className="text-coral">{getTotalProtein(food).toFixed(1)}g P</span>
-                      <span className="text-amber-glow">{getTotalCarbs(food).toFixed(1)}g C</span>
-                      <span className="text-neon-cyan">{getTotalFat(food).toFixed(1)}g F</span>
+                    
+                    {/* Menu Button */}
+                    <div className="absolute top-2 right-2 sm:relative sm:top-0 sm:right-0">
                       <button
-                        onClick={() => handleEdit(food)}
-                        className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-electric transition-all"
-                        title="Edit"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuId(openMenuId === food.id ? null : food.id);
+                        }}
+                        className="p-2 rounded-lg hover:bg-white/10 transition-all"
+                        title="Options"
                       >
-                        ✎
+                        <span className="text-lg">⋯</span>
                       </button>
-                      <button
-                        onClick={() => handleDelete(food.id)}
-                        className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-coral transition-all"
-                        title="Delete"
-                      >
-                        ✕
-                      </button>
+                      
+                      {/* Dropdown Menu */}
+                      {openMenuId === food.id && (
+                        <div 
+                          className="absolute right-0 mt-1 w-32 bg-midnight border border-white/20 rounded-lg shadow-lg z-10 overflow-hidden"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={() => handleEdit(food)}
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-white/10 transition-all flex items-center gap-2"
+                          >
+                            <span>✎</span> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(food.id)}
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-coral/20 text-coral transition-all flex items-center gap-2"
+                          >
+                            <span>✕</span> Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
                 {/* Day Total */}
                 <div className="border-t border-white/10 pt-3 mt-3">
-                  <div className="flex justify-between items-center font-semibold">
-                    <span>Day Total</span>
-                    <div className="flex gap-4 font-mono">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 font-semibold">
+                    <span className="text-sm sm:text-base">Day Total ({selectedFoods.length} items)</span>
+                    <div className="flex gap-2 sm:gap-4 text-xs sm:text-sm font-mono flex-wrap">
                       <span className="text-electric">
                         {Math.round(selectedFoods.reduce((s, f) => s + getTotalCalories(f), 0))} cal
                       </span>
@@ -712,6 +763,14 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                       </span>
                     </div>
                   </div>
+                  
+                  {/* Delete All Button */}
+                  <button
+                    onClick={handleDeleteAllDay}
+                    className="w-full mt-3 px-4 py-2 rounded-lg border border-coral/30 text-coral text-sm hover:bg-coral/10 transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>🗑️</span> Delete All Entries for This Day
+                  </button>
                 </div>
               </div>
             ) : (
