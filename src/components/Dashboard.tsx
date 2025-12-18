@@ -178,8 +178,9 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
   
   // Calculate TOTAL deficit by summing up each day's actual deficit
   // Formula: Daily Deficit = Calories In - (TDEE + Workout Burned)
-  // Sum up each day in the summaries array
-  const totalDeficit = summaries.reduce((total, day) => {
+  // ONLY count days with food logged (totalCalories > 0) to avoid massive negative deficits from empty days
+  const daysWithData = summaries.filter(day => day.totalCalories > 0);
+  const totalDeficit = daysWithData.reduce((total, day) => {
     const dayCaloriesIn = day.totalCalories;
     const dayWorkoutBurned = day.workoutEntries.reduce((sum, w) => sum + (w.caloriesBurned || 0), 0);
     const dayExpenditure = dailyTdee + dayWorkoutBurned;
@@ -187,11 +188,12 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
     return total + dayDeficit;
   }, 0);
   
-  // For display in summary table
+  // For display in summary table (use actual logged days, not total range)
   const actualDaysInRange = summaries.length;
-  const totalTdee = dailyTdee * actualDaysInRange; // Total TDEE for the period
+  const daysWithDataCount = daysWithData.length;
+  const totalTdee = dailyTdee * daysWithDataCount; // Total TDEE only for logged days
   const totalExpenditure = totalTdee + totalCaloriesBurned; // Total expenditure
-  const avgDailyDeficit = actualDaysInRange > 0 ? Math.round(totalDeficit / actualDaysInRange) : 0;
+  const avgDailyDeficit = daysWithDataCount > 0 ? Math.round(totalDeficit / daysWithDataCount) : 0;
 
   const macroPercentages = getMacroPercentages(totalProtein, totalCarbs, totalFat);
   const macroData = [
@@ -305,7 +307,10 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
               {totalDeficit < 0 ? '📉' : '📈'}
             </div>
             <span className="text-gray-400 text-sm">
-              {isCustomRange ? 'Custom' : `${actualDaysInRange}D`} Deficit
+              {daysWithDataCount}D Deficit
+              {daysWithDataCount !== actualDaysInRange && (
+                <span className="text-gray-600 text-xs ml-1">({actualDaysInRange}D total)</span>
+              )}
             </span>
           </div>
           <p className={`text-3xl font-bold font-mono ${totalDeficit < 0 ? 'text-electric' : 'text-coral'}`}>
@@ -568,7 +573,9 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
                 })}
                 {/* Total Row */}
                 <tr className="border-t-2 border-white/20 font-bold">
-                  <td className="py-3 px-2">Total ({actualDaysInRange}D)</td>
+                  <td className="py-3 px-2">
+                    Total ({daysWithDataCount}D logged)
+                  </td>
                   <td className="text-right py-3 px-2 font-mono">{totalCalories.toLocaleString()}</td>
                   <td className="text-right py-3 px-2 font-mono text-amber-400">{Math.round(totalTdee).toLocaleString()}</td>
                   <td className="text-right py-3 px-2 font-mono text-coral">{totalCaloriesBurned.toLocaleString()}</td>
