@@ -171,8 +171,41 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
     setFormData({ ...formData, name: value });
     
     if (value.length >= 2) {
-      // Always search local database
-      setFoodSuggestions(searchFoods(value));
+      // Search user's previously added foods
+      const lowerQuery = value.toLowerCase();
+      const userFoodMatches = foods
+        .filter(f => f.name.toLowerCase().includes(lowerQuery))
+        .reduce((acc, food) => {
+          // Create unique entries based on name+calories combo
+          const key = `${food.name}-${food.calories}`;
+          if (!acc.has(key)) {
+            acc.set(key, {
+              name: food.name,
+              calories: food.calories,
+              protein: food.protein,
+              carbs: food.carbs,
+              fat: food.fat,
+              category: 'cooked' as const,
+              servingSize: undefined,
+            });
+          }
+          return acc;
+        }, new Map<string, FoodItem>());
+
+      const userFoods = Array.from(userFoodMatches.values()).slice(0, 5);
+      
+      // Search local NIN database
+      const ninFoods = searchFoods(value);
+      
+      // Combine: user foods first, then NIN foods (remove duplicates)
+      const combined = [...userFoods];
+      ninFoods.forEach(ninFood => {
+        if (!combined.some(uf => uf.name === ninFood.name)) {
+          combined.push(ninFood);
+        }
+      });
+      
+      setFoodSuggestions(combined.slice(0, 15));
       
       // Also search online if enabled
       if (searchSource === 'online') {
@@ -237,11 +270,11 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
     setSelectedDate(formatDate(current));
   };
 
-  // Helper to calculate totals with count
-  const getTotalCalories = (food: FoodEntry) => food.calories * (food.count || 1);
-  const getTotalProtein = (food: FoodEntry) => food.protein * (food.count || 1);
-  const getTotalCarbs = (food: FoodEntry) => food.carbs * (food.count || 1);
-  const getTotalFat = (food: FoodEntry) => food.fat * (food.count || 1);
+  // Helper to calculate totals with count (rounded to 2 decimal places)
+  const getTotalCalories = (food: FoodEntry) => Math.round(food.calories * (food.count || 1));
+  const getTotalProtein = (food: FoodEntry) => Math.round(food.protein * (food.count || 1) * 100) / 100;
+  const getTotalCarbs = (food: FoodEntry) => Math.round(food.carbs * (food.count || 1) * 100) / 100;
+  const getTotalFat = (food: FoodEntry) => Math.round(food.fat * (food.count || 1) * 100) / 100;
 
   const foodsByDate = groupByDate(foods);
   const dates = Array.from(foodsByDate.keys()).sort((a, b) => b.localeCompare(a));
@@ -436,13 +469,13 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                     {/* Suggestions dropdown */}
                     {(foodSuggestions.length > 0 || apiSuggestions.length > 0) && (
                       <div className="absolute z-10 w-full mt-1 bg-midnight border border-white/20 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                        {/* Local NIN Results */}
+                        {/* User's Previous Foods + NIN Database */}
                         {foodSuggestions.length > 0 && (
                           <>
                             <div className="px-3 py-1.5 text-xs text-electric bg-electric/10 sticky top-0">
-                              🇮🇳 NIN Database ({foodSuggestions.length})
+                              📜 Your Foods + NIN Database ({foodSuggestions.length})
                             </div>
-                            {foodSuggestions.slice(0, 8).map(food => (
+                            {foodSuggestions.slice(0, 15).map(food => (
                               <button
                                 key={`local-${food.name}`}
                                 type="button"
@@ -450,7 +483,7 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                                 className="w-full px-3 py-2 text-left hover:bg-white/10 text-sm border-b border-white/5"
                               >
                                 <span className="font-medium">{food.name}</span>
-                                <span className="text-gray-400 ml-2 text-xs">{food.calories} cal · {food.protein}g P</span>
+                                <span className="text-gray-400 ml-2 text-xs">{food.calories} cal · {food.protein.toFixed(1)}g P</span>
                                 {food.servingSize && <span className="text-gray-500 ml-1 text-xs">({food.servingSize})</span>}
                               </button>
                             ))}
@@ -470,7 +503,7 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                                 className="w-full px-3 py-2 text-left hover:bg-white/10 text-sm border-b border-white/5"
                               >
                                 <span className="font-medium">{food.name}</span>
-                                <span className="text-gray-400 ml-2 text-xs">{food.calories} cal · {food.protein}g P</span>
+                                <span className="text-gray-400 ml-2 text-xs">{food.calories} cal · {food.protein.toFixed(1)}g P</span>
                                 {food.servingSize && <span className="text-gray-500 ml-1 text-xs">({food.servingSize})</span>}
                               </button>
                             ))}
@@ -483,11 +516,11 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                     <label className="block text-xs text-gray-500 mb-1">Servings</label>
                     <input
                       type="number"
-                      step="0.25"
+                      step="any"
                       value={formData.count}
                       onChange={(e) => setFormData({ ...formData, count: e.target.value })}
                       placeholder="1"
-                      min="0.25"
+                      min="0.01"
                       className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
                     />
                   </div>
