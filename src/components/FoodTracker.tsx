@@ -866,7 +866,7 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
               <span className="text-gray-400">
                 📊 {filteredFoods.length} entries | 
                 🔥 {totalCals.toLocaleString()} cal | 
-                🥩 {totalProtein}g protein
+                🥩 {totalProtein.toFixed(1)}g protein
               </span>
             </div>
           </div>
@@ -937,8 +937,8 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                       </div>
                       <div className="flex gap-4 text-xs text-gray-400 mt-1">
                         <span>{food.count}x eaten</span>
-                        <span>{food.avgCalories} cal avg</span>
-                        <span>{food.avgProtein}g protein avg</span>
+                        <span>{Math.round(food.avgCalories)} cal avg</span>
+                        <span>{food.avgProtein.toFixed(1)}g protein avg</span>
                       </div>
                       <div className="h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
                         <div
