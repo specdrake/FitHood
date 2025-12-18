@@ -683,7 +683,7 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
               <>
                 {/* Day Total - Moved to Top */}
                 <div className="mb-4 p-4 rounded-xl bg-white/5 border border-white/10">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 font-semibold mb-3">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 font-semibold">
                     <span className="text-sm sm:text-base">Day Total ({selectedFoods.length} items)</span>
                     <div className="flex gap-2 sm:gap-4 text-xs sm:text-sm font-mono flex-wrap">
                       <span className="text-electric">
@@ -700,14 +700,6 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                       </span>
                     </div>
                   </div>
-                  
-                  {/* Delete All Button */}
-                  <button
-                    onClick={handleDeleteAllDay}
-                    className="w-full px-4 py-2 rounded-lg border border-coral/30 text-coral text-sm hover:bg-coral/10 transition-all flex items-center justify-center gap-2"
-                  >
-                    <span>🗑️</span> Delete All Entries for This Day
-                  </button>
                 </div>
 
                 <div className="space-y-3 max-h-80 overflow-y-auto">
@@ -775,6 +767,14 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                   </div>
                 ))}
               </div>
+              
+              {/* Delete All Button - At Bottom */}
+              <button
+                onClick={handleDeleteAllDay}
+                className="w-full mt-3 px-4 py-2 rounded-lg border border-coral/30 text-coral text-sm hover:bg-coral/10 transition-all flex items-center justify-center gap-2"
+              >
+                <span>🗑️</span> Delete All Entries for This Day
+              </button>
               </>
             ) : (
               <div className="text-center py-8 text-gray-500">
