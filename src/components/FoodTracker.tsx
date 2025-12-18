@@ -680,7 +680,37 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
 
             {/* Food List */}
             {selectedFoods.length > 0 ? (
-              <div className="space-y-3 max-h-80 overflow-y-auto">
+              <>
+                {/* Day Total - Moved to Top */}
+                <div className="mb-4 p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 font-semibold mb-3">
+                    <span className="text-sm sm:text-base">Day Total ({selectedFoods.length} items)</span>
+                    <div className="flex gap-2 sm:gap-4 text-xs sm:text-sm font-mono flex-wrap">
+                      <span className="text-electric">
+                        {Math.round(selectedFoods.reduce((s, f) => s + getTotalCalories(f), 0))} cal
+                      </span>
+                      <span className="text-coral">
+                        {selectedFoods.reduce((s, f) => s + getTotalProtein(f), 0).toFixed(1)}g P
+                      </span>
+                      <span className="text-amber-glow">
+                        {selectedFoods.reduce((s, f) => s + getTotalCarbs(f), 0).toFixed(1)}g C
+                      </span>
+                      <span className="text-neon-cyan">
+                        {selectedFoods.reduce((s, f) => s + getTotalFat(f), 0).toFixed(1)}g F
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Delete All Button */}
+                  <button
+                    onClick={handleDeleteAllDay}
+                    className="w-full px-4 py-2 rounded-lg border border-coral/30 text-coral text-sm hover:bg-coral/10 transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>🗑️</span> Delete All Entries for This Day
+                  </button>
+                </div>
+
+                <div className="space-y-3 max-h-80 overflow-y-auto">
                 {selectedFoods.map((food) => (
                   <div
                     key={food.id}
@@ -744,35 +774,8 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                     </div>
                   </div>
                 ))}
-                {/* Day Total */}
-                <div className="border-t border-white/10 pt-3 mt-3">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 font-semibold">
-                    <span className="text-sm sm:text-base">Day Total ({selectedFoods.length} items)</span>
-                    <div className="flex gap-2 sm:gap-4 text-xs sm:text-sm font-mono flex-wrap">
-                      <span className="text-electric">
-                        {Math.round(selectedFoods.reduce((s, f) => s + getTotalCalories(f), 0))} cal
-                      </span>
-                      <span className="text-coral">
-                        {selectedFoods.reduce((s, f) => s + getTotalProtein(f), 0).toFixed(1)}g P
-                      </span>
-                      <span className="text-amber-glow">
-                        {selectedFoods.reduce((s, f) => s + getTotalCarbs(f), 0).toFixed(1)}g C
-                      </span>
-                      <span className="text-neon-cyan">
-                        {selectedFoods.reduce((s, f) => s + getTotalFat(f), 0).toFixed(1)}g F
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Delete All Button */}
-                  <button
-                    onClick={handleDeleteAllDay}
-                    className="w-full mt-3 px-4 py-2 rounded-lg border border-coral/30 text-coral text-sm hover:bg-coral/10 transition-all flex items-center justify-center gap-2"
-                  >
-                    <span>🗑️</span> Delete All Entries for This Day
-                  </button>
-                </div>
               </div>
+              </>
             ) : (
               <div className="text-center py-8 text-gray-500">
                 <p className="text-4xl mb-2">🍽️</p>

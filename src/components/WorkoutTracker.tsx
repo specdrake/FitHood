@@ -82,12 +82,22 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormState>(emptyForm);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     if (userId) {
       loadData();
     }
   }, [userId, refreshTrigger]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setOpenMenuId(null);
+    if (openMenuId) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [openMenuId]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -106,10 +116,21 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
     if (confirm('Delete this workout entry?')) {
       await deleteWorkoutEntry(id);
       loadData();
+      setOpenMenuId(null);
+    }
+  };
+
+  const handleDeleteAllDay = async () => {
+    if (confirm(`Delete all ${selectedWorkouts.length} workout entries for ${formatDisplayDate(selectedDate)}?`)) {
+      for (const workout of selectedWorkouts) {
+        await deleteWorkoutEntry(workout.id);
+      }
+      loadData();
     }
   };
 
   const handleEdit = (workout: WorkoutEntry) => {
+    setOpenMenuId(null);
     setEditingId(workout.id);
     setFormData({
       exercise: workout.exercise,
@@ -465,6 +486,15 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
                     placeholder="Notes (optional)"
                     className="flex-1 px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-neon-cyan focus:outline-none text-sm"
                   />
+                  {editingId && (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(editingId)}
+                      className="px-4 py-2 rounded-lg border border-coral/30 text-coral hover:bg-coral/10 transition-all text-sm font-medium"
+                    >
+                      Delete
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={handleCancel}
@@ -484,19 +514,52 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
 
             {/* Workout List */}
             {selectedWorkouts.length > 0 ? (
-              <div className="space-y-3 max-h-80 overflow-y-auto">
+              <>
+                {/* Day Total - Moved to Top */}
+                <div className="mb-4 p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 font-semibold mb-3">
+                    <span className="text-sm sm:text-base">Day Total ({selectedWorkouts.length} exercises)</span>
+                    <div className="flex gap-2 sm:gap-4 text-xs sm:text-sm font-mono flex-wrap">
+                      {selectedWorkouts.some(w => w.caloriesBurned) && (
+                        <span className="text-coral">
+                          🔥 {selectedWorkouts.reduce((sum, w) => sum + (w.caloriesBurned || 0), 0)} cal
+                        </span>
+                      )}
+                      {selectedWorkouts.some(w => w.distance) && (
+                        <span className="text-pink-400">
+                          📍 {selectedWorkouts.reduce((sum, w) => sum + (w.distance || 0), 0).toFixed(1)} km
+                        </span>
+                      )}
+                      {selectedWorkouts.some(w => w.duration) && (
+                        <span className="text-purple-400">
+                          ⏱️ {selectedWorkouts.reduce((sum, w) => sum + (w.duration || 0), 0)} min
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Delete All Button */}
+                  <button
+                    onClick={handleDeleteAllDay}
+                    className="w-full px-4 py-2 rounded-lg border border-coral/30 text-coral text-sm hover:bg-coral/10 transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>🗑️</span> Delete All Entries for This Day
+                  </button>
+                </div>
+
+                <div className="space-y-3 max-h-80 overflow-y-auto">
                 {selectedWorkouts.map((workout) => (
                   <div
                     key={workout.id}
-                    className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all group"
+                    className="relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-3 sm:p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{CATEGORY_ICONS[workout.category]}</span>
-                      <div>
-                        <p className="font-medium">{workout.exercise}</p>
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="text-2xl shrink-0">{CATEGORY_ICONS[workout.category]}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm sm:text-base truncate">{workout.exercise}</p>
                         <div className="flex gap-2 items-center flex-wrap">
                           <span
-                            className="text-xs px-2 py-0.5 rounded-full capitalize"
+                            className="text-xs px-2 py-0.5 rounded-full capitalize shrink-0"
                             style={{ 
                               background: `${CATEGORY_COLORS[workout.category]}20`,
                               color: CATEGORY_COLORS[workout.category],
@@ -505,48 +568,70 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
                             {workout.category}
                           </span>
                           {workout.notes && (
-                            <span className="text-xs text-gray-500">{workout.notes}</span>
+                            <span className="text-xs text-gray-500 truncate">{workout.notes}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs sm:text-sm font-mono mt-1 flex-wrap">
+                          {workout.sets && workout.sets > 0 && (
+                            <span className="text-electric">{workout.sets} sets</span>
+                          )}
+                          {workout.reps && workout.reps > 0 && (
+                            <span className="text-amber-glow">{workout.reps} reps</span>
+                          )}
+                          {workout.weight && workout.weight > 0 && (
+                            <span className="text-neon-cyan">{workout.weight} kg</span>
+                          )}
+                          {workout.duration && workout.duration > 0 && (
+                            <span className="text-purple-400">{workout.duration} min</span>
+                          )}
+                          {workout.distance && workout.distance > 0 && (
+                            <span className="text-pink-400">📍 {workout.distance} km</span>
+                          )}
+                          {workout.caloriesBurned && workout.caloriesBurned > 0 && (
+                            <span className="text-coral">🔥 {workout.caloriesBurned}</span>
                           )}
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 text-sm font-mono flex-wrap justify-end">
-                      {workout.sets && workout.sets > 0 && (
-                        <span className="text-electric">{workout.sets} sets</span>
-                      )}
-                      {workout.reps && workout.reps > 0 && (
-                        <span className="text-amber-glow">{workout.reps} reps</span>
-                      )}
-                      {workout.weight && workout.weight > 0 && (
-                        <span className="text-neon-cyan">{workout.weight} kg</span>
-                      )}
-                      {workout.duration && workout.duration > 0 && (
-                        <span className="text-purple-400">{workout.duration} min</span>
-                      )}
-                      {workout.distance && workout.distance > 0 && (
-                        <span className="text-pink-400">📍 {workout.distance} km</span>
-                      )}
-                      {workout.caloriesBurned && workout.caloriesBurned > 0 && (
-                        <span className="text-coral">🔥 {workout.caloriesBurned}</span>
-                      )}
+                    
+                    {/* Menu Button */}
+                    <div className="absolute top-2 right-2 sm:relative sm:top-0 sm:right-0">
                       <button
-                        onClick={() => handleEdit(workout)}
-                        className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-electric transition-all ml-2"
-                        title="Edit"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuId(openMenuId === workout.id ? null : workout.id);
+                        }}
+                        className="p-2 rounded-lg hover:bg-white/10 transition-all"
+                        title="Options"
                       >
-                        ✎
+                        <span className="text-lg">⋯</span>
                       </button>
-                      <button
-                        onClick={() => handleDelete(workout.id)}
-                        className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-coral transition-all"
-                        title="Delete"
-                      >
-                        ✕
-                      </button>
+                      
+                      {/* Dropdown Menu */}
+                      {openMenuId === workout.id && (
+                        <div 
+                          className="absolute right-0 mt-1 w-32 bg-midnight border border-white/20 rounded-lg shadow-lg z-10 overflow-hidden"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={() => handleEdit(workout)}
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-white/10 transition-all flex items-center gap-2"
+                          >
+                            <span>✎</span> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(workout.id)}
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-coral/20 text-coral transition-all flex items-center gap-2"
+                          >
+                            <span>✕</span> Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
+              </>
             ) : (
               <div className="text-center py-8 text-gray-500">
                 <p className="text-4xl mb-2">💪</p>
