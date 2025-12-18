@@ -476,7 +476,6 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
               <thead>
                 <tr className="border-b border-white/10">
                   <th className="text-left py-2 px-2 text-gray-400 font-medium">Date</th>
-                  <th className="text-center py-2 px-2 text-gray-400 font-medium">Done</th>
                   <th className="text-right py-2 px-2 text-gray-400 font-medium">Calories In</th>
                   <th className="text-right py-2 px-2 text-gray-400 font-medium">TDEE</th>
                   <th className="text-right py-2 px-2 text-gray-400 font-medium">Workout</th>
@@ -493,14 +492,6 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
                   return (
                     <tr key={day.date} className="border-b border-white/5 hover:bg-white/5">
                       <td className="py-2 px-2">{formatDisplayDate(day.date)}</td>
-                      <td className="text-center py-2 px-2">
-                        <input
-                          type="checkbox"
-                          checked={day.isComplete || false}
-                          onChange={(e) => handleToggleDayComplete(day.date, e.target.checked)}
-                          className="w-4 h-4 rounded border-gray-600 bg-midnight text-electric focus:ring-electric cursor-pointer"
-                        />
-                      </td>
                       <td className="text-right py-2 px-2 font-mono">
                         {day.totalCalories > 0 ? day.totalCalories.toLocaleString() : '-'}
                       </td>

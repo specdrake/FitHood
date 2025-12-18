@@ -16,7 +16,7 @@ import {
   Line,
   Legend,
 } from 'recharts';
-import { getAllFoods, deleteFoodEntry, addFoodEntries, updateFoodEntry } from '@/lib/db';
+import { getAllFoods, deleteFoodEntry, addFoodEntries, updateFoodEntry, markDayComplete, getDayCompletions } from '@/lib/db';
 import { FoodEntry, FoodContribution } from '@/lib/types';
 import { formatDisplayDate, formatDate, groupByDate, calculateFoodContributions } from '@/lib/utils';
 import { searchFoods, FoodItem, getAllCategories, getFoodsByCategory } from '@/lib/food-database';
@@ -82,6 +82,7 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
   const [searchSource, setSearchSource] = useState<'local' | 'online'>('local');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [isDayComplete, setIsDayComplete] = useState(false);
   // Analysis date range
   const [analysisRange, setAnalysisRange] = useState<'7' | '14' | '30' | 'all' | 'custom'>('30');
   const [customStartDate, setCustomStartDate] = useState<string>(getDateNDaysAgo(30));
@@ -90,8 +91,9 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
   useEffect(() => {
     if (userId) {
       loadData();
+      loadDayCompletion();
     }
-  }, [userId, refreshTrigger]);
+  }, [userId, refreshTrigger, selectedDate]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -104,6 +106,32 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
       console.error('Failed to load food data:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadDayCompletion = async () => {
+    try {
+      const today = formatDate(new Date());
+      const completions = await getDayCompletions(userId, selectedDate, selectedDate);
+      const hasCompletion = completions.has(selectedDate);
+      
+      // Auto-mark: past days are complete, today is not complete unless manually marked
+      if (hasCompletion) {
+        setIsDayComplete(completions.get(selectedDate)!);
+      } else {
+        setIsDayComplete(selectedDate < today);
+      }
+    } catch (error) {
+      console.error('Failed to load day completion:', error);
+    }
+  };
+
+  const handleToggleDayComplete = async (isComplete: boolean) => {
+    try {
+      await markDayComplete(userId, selectedDate, isComplete);
+      setIsDayComplete(isComplete);
+    } catch (error) {
+      console.error('Failed to toggle day completion:', error);
     }
   };
 
@@ -374,6 +402,23 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                       className="px-4 py-2 rounded-lg bg-gradient-to-r from-coral to-amber-glow text-midnight font-semibold hover:glow-sm transition-all text-sm"
                     >
                       + Custom
+                    </button>
+                    <button
+                      onClick={() => handleToggleDayComplete(!isDayComplete)}
+                      className={`px-4 py-2 rounded-lg text-sm flex items-center gap-2 ${
+                        isDayComplete 
+                          ? 'bg-electric/20 text-electric border border-electric/30' 
+                          : 'glass hover:bg-white/10'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isDayComplete}
+                        onChange={(e) => handleToggleDayComplete(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-600 bg-midnight text-electric focus:ring-electric cursor-pointer"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <span>Day Done</span>
                     </button>
                   </>
                 )}
