@@ -174,6 +174,13 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
   const dates = Array.from(workoutsByDate.keys()).sort((a, b) => b.localeCompare(a));
   const selectedWorkouts = workoutsByDate.get(selectedDate) || [];
 
+  // Normalize exercise name by removing details in parentheses
+  // "Walking (8km)" → "Walking"
+  // "Stretching (15 mins)" → "Stretching"
+  const normalizeExerciseName = (name: string): string => {
+    return name.replace(/\s*\([^)]*\)\s*/g, '').trim();
+  };
+
   // Calculate exercise stats - only count non-zero values for averages
   const exerciseStats = new Map<string, { 
     count: number; 
@@ -186,7 +193,8 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
   }>();
   
   workouts.forEach((w) => {
-    const existing = exerciseStats.get(w.exercise) || { 
+    const normalizedName = normalizeExerciseName(w.exercise);
+    const existing = exerciseStats.get(normalizedName) || { 
       count: 0, 
       totalSets: 0, 
       setsCount: 0,
@@ -207,7 +215,7 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
       existing.totalDistance += w.distance;
       existing.distanceCount += 1;
     }
-    exerciseStats.set(w.exercise, existing);
+    exerciseStats.set(normalizedName, existing);
   });
 
   // Daily workout count for chart
