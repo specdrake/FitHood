@@ -483,11 +483,11 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                     <label className="block text-xs text-gray-500 mb-1">Servings</label>
                     <input
                       type="number"
-                      step="0.1"
+                      step="0.25"
                       value={formData.count}
                       onChange={(e) => setFormData({ ...formData, count: e.target.value })}
                       placeholder="1"
-                      min="0.1"
+                      min="0.25"
                       className="w-full px-3 py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
                     />
                   </div>
