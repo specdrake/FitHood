@@ -179,9 +179,13 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
   const bmr = calculateBMR();
   const dailyTdee = userProfile ? bmr * (ACTIVITY_MULTIPLIERS[userProfile.activityLevel] || 1.55) : 0;
   
+  // Get today's date for visual distinction
+  const today = new Date().toISOString().split('T')[0];
+  
   // Calculate TOTAL deficit by summing up each day's actual deficit
   // Formula: Daily Deficit = Calories In - (TDEE + Workout Burned)
   // ONLY count days with food logged (totalCalories > 0) to avoid massive negative deficits from empty days
+  // NOTE: This INCLUDES today even if not marked complete
   const daysWithData = summaries.filter(day => day.totalCalories > 0);
   const totalDeficit = daysWithData.reduce((total, day) => {
     const dayCaloriesIn = day.totalCalories;
@@ -209,6 +213,8 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
     date: formatDisplayDate(s.date),
     calories: s.totalCalories,
     protein: s.totalProtein,
+    isToday: s.date === today,
+    isIncomplete: !s.isComplete && s.totalCalories > 0,
   }));
 
   const weightChartData = weights.map((w) => ({
@@ -543,7 +549,7 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
         
         return (
           <div className="glass rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold text-lg flex items-center gap-2">
                 <span>📊</span> Daily Deficit Breakdown
               </h3>
@@ -553,6 +559,19 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
                 </span>
               )}
             </div>
+            
+            {/* Info note about today/incomplete days */}
+            {daysWithFood.some(d => d.date === today && !d.isComplete) && (
+              <div className="mb-4 p-3 rounded-lg bg-amber-glow/10 border border-amber-glow/30">
+                <p className="text-xs text-amber-glow flex items-center gap-2">
+                  <span>ℹ️</span>
+                  <span>
+                    <strong>Today&apos;s data</strong> is included in totals & deficit but <strong>excluded from averages</strong> until marked as &quot;Day Done&quot; in the Food tab.
+                  </span>
+                </p>
+              </div>
+            )}
+            
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -570,10 +589,28 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
                     const dayBurned = day.workoutEntries.reduce((sum, w) => sum + (w.caloriesBurned || 0), 0);
                     const dayOut = dailyTdee + dayBurned;
                     const dayDeficit = day.totalCalories - dayOut;
+                    const isToday = day.date === today;
+                    const isIncomplete = !day.isComplete && day.totalCalories > 0;
                     
                     return (
-                      <tr key={day.date} className="border-b border-white/5 hover:bg-white/5">
-                        <td className="py-2 px-2">{formatDisplayDate(day.date)}</td>
+                      <tr 
+                        key={day.date} 
+                        className={`border-b border-white/5 ${
+                          isToday && isIncomplete
+                            ? 'bg-amber-glow/10 hover:bg-amber-glow/15' 
+                            : 'hover:bg-white/5'
+                        }`}
+                      >
+                        <td className="py-2 px-2">
+                          <div className="flex items-center gap-2">
+                            {formatDisplayDate(day.date)}
+                            {isToday && isIncomplete && (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-amber-glow/20 text-amber-glow border border-amber-glow/30">
+                                In Progress
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="text-right py-2 px-2 font-mono">
                           {day.totalCalories.toLocaleString()}
                         </td>
