@@ -529,11 +529,17 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
 
       {/* Daily Deficit Table */}
       {dailyTdee > 0 && summaries.length > 0 && (() => {
+        // Filter to only show days with logged food (totalCalories > 0)
+        const daysWithFood = summaries.filter(day => day.totalCalories > 0);
+        
+        // Don't show table if no days with food
+        if (daysWithFood.length === 0) return null;
+        
         // Pagination logic
-        const totalPages = Math.ceil(summaries.length / itemsPerPage);
+        const totalPages = Math.ceil(daysWithFood.length / itemsPerPage);
         const startIndex = (currentPage - 1) * itemsPerPage;
         const endIndex = startIndex + itemsPerPage;
-        const paginatedSummaries = summaries.slice(startIndex, endIndex);
+        const paginatedSummaries = daysWithFood.slice(startIndex, endIndex);
         
         return (
           <div className="glass rounded-2xl p-6">
@@ -541,9 +547,9 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
               <h3 className="font-semibold text-lg flex items-center gap-2">
                 <span>📊</span> Daily Deficit Breakdown
               </h3>
-              {summaries.length > itemsPerPage && (
+              {daysWithFood.length > itemsPerPage && (
                 <span className="text-sm text-gray-400">
-                  Showing {startIndex + 1}-{Math.min(endIndex, summaries.length)} of {summaries.length} days
+                  Showing {startIndex + 1}-{Math.min(endIndex, daysWithFood.length)} of {daysWithFood.length} days
                 </span>
               )}
             </div>
@@ -569,7 +575,7 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
                       <tr key={day.date} className="border-b border-white/5 hover:bg-white/5">
                         <td className="py-2 px-2">{formatDisplayDate(day.date)}</td>
                         <td className="text-right py-2 px-2 font-mono">
-                          {day.totalCalories > 0 ? day.totalCalories.toLocaleString() : '-'}
+                          {day.totalCalories.toLocaleString()}
                         </td>
                         <td className="text-right py-2 px-2 font-mono text-amber-400">
                           {Math.round(dailyTdee).toLocaleString()}
@@ -583,7 +589,7 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
                         <td className={`text-right py-2 px-2 font-mono font-bold ${
                           dayDeficit < 0 ? 'text-electric' : dayDeficit > 0 ? 'text-coral' : 'text-gray-500'
                         }`}>
-                          {day.totalCalories > 0 ? dayDeficit.toLocaleString() : '-'}
+                          {Math.round(dayDeficit).toLocaleString()}
                         </td>
                       </tr>
                     );
