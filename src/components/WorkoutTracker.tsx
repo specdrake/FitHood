@@ -77,7 +77,7 @@ const emptyForm: FormState = {
 export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTrackerProps) {
   const [workouts, setWorkouts] = useState<WorkoutEntry[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
-  const [viewMode, setViewMode] = useState<'daily' | 'exercises' | 'all'>('daily');
+  const [viewMode, setViewMode] = useState<'daily' | 'exercises'>('daily');
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -275,7 +275,7 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
           <p className="text-gray-400">{workouts.length} exercises logged</p>
         </div>
         <div className="flex gap-2">
-          {(['daily', 'exercises', 'all'] as const).map((mode) => (
+          {(['daily', 'exercises'] as const).map((mode) => (
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
@@ -721,89 +721,6 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
         </div>
       )}
 
-      {viewMode === 'all' && (
-        /* All Workouts View */
-        <div className="glass rounded-2xl p-6">
-          <h3 className="font-semibold text-lg mb-4">📜 All Workout Entries</h3>
-          {workouts.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-gray-400 border-b border-white/10">
-                  <tr>
-                    <th className="text-left py-3 px-2">Date</th>
-                    <th className="text-left py-3 px-2">Exercise</th>
-                    <th className="text-left py-3 px-2">Category</th>
-                    <th className="text-right py-3 px-2">Sets</th>
-                    <th className="text-right py-3 px-2">Reps</th>
-                    <th className="text-right py-3 px-2">Weight</th>
-                    <th className="text-right py-3 px-2">Duration</th>
-                    <th className="text-right py-3 px-2">Distance</th>
-                    <th className="text-right py-3 px-2">🔥 Cal</th>
-                    <th className="py-3 px-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {workouts.slice(0, 100).map((workout) => (
-                    <tr key={workout.id} className="border-b border-white/5 hover:bg-white/5 group">
-                      <td className="py-3 px-2 text-gray-400">{formatDisplayDate(workout.date)}</td>
-                      <td className="py-3 px-2 font-medium">{workout.exercise}</td>
-                      <td className="py-3 px-2">
-                        <span
-                          className="text-xs px-2 py-1 rounded-full capitalize"
-                          style={{ 
-                            background: `${CATEGORY_COLORS[workout.category]}20`,
-                            color: CATEGORY_COLORS[workout.category],
-                          }}
-                        >
-                          {workout.category}
-                        </span>
-                      </td>
-                      <td className="py-3 px-2 text-right font-mono">{workout.sets || '-'}</td>
-                      <td className="py-3 px-2 text-right font-mono">{workout.reps || '-'}</td>
-                      <td className="py-3 px-2 text-right font-mono">
-                        {workout.weight ? `${workout.weight}kg` : '-'}
-                      </td>
-                      <td className="py-3 px-2 text-right font-mono">
-                        {workout.duration ? `${workout.duration}m` : '-'}
-                      </td>
-                      <td className="py-3 px-2 text-right font-mono text-pink-400">
-                        {workout.distance ? `${workout.distance}km` : '-'}
-                      </td>
-                      <td className="py-3 px-2 text-right font-mono text-coral">
-                        {workout.caloriesBurned || '-'}
-                      </td>
-                      <td className="py-3 px-2 text-right">
-                        <button
-                          onClick={() => handleEdit(workout)}
-                          className="text-gray-500 hover:text-electric transition-all mr-2 opacity-0 group-hover:opacity-100"
-                        >
-                          ✎
-                        </button>
-                        <button
-                          onClick={() => handleDelete(workout.id)}
-                          className="text-gray-500 hover:text-coral transition-all opacity-0 group-hover:opacity-100"
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {workouts.length > 100 && (
-                <p className="text-center text-gray-500 text-sm py-4">
-                  Showing 100 of {workouts.length} entries
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <p className="text-4xl mb-2">💪</p>
-              <p>No workout data yet</p>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

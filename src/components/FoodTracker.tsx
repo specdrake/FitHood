@@ -71,7 +71,7 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
   const [foods, setFoods] = useState<FoodEntry[]>([]);
   const [contributions, setContributions] = useState<FoodContribution[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
-  const [viewMode, setViewMode] = useState<'daily' | 'all' | 'analysis'>('daily');
+  const [viewMode, setViewMode] = useState<'daily' | 'analysis'>('daily');
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -337,7 +337,7 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
           <p className="text-gray-400">{foods.length} entries logged</p>
         </div>
         <div className="flex gap-2">
-          {(['daily', 'analysis', 'all'] as const).map((mode) => (
+          {(['daily', 'analysis'] as const).map((mode) => (
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
@@ -962,67 +962,6 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
         );
       })()}
 
-      {viewMode === 'all' && (
-        /* All Foods View */
-        <div className="glass rounded-2xl p-6">
-          <h3 className="font-semibold text-lg mb-4">📜 All Food Entries</h3>
-          {foods.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-gray-400 border-b border-white/10">
-                  <tr>
-                    <th className="text-left py-3 px-2">Date</th>
-                    <th className="text-left py-3 px-2">Food</th>
-                    <th className="text-right py-3 px-2">Count</th>
-                    <th className="text-right py-3 px-2">Total Cal</th>
-                    <th className="text-right py-3 px-2">Protein</th>
-                    <th className="text-right py-3 px-2">Carbs</th>
-                    <th className="text-right py-3 px-2">Fat</th>
-                    <th className="py-3 px-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {foods.slice(0, 100).map((food) => (
-                    <tr key={food.id} className="border-b border-white/5 hover:bg-white/5 group">
-                      <td className="py-3 px-2 text-gray-400">{formatDisplayDate(food.date)}</td>
-                      <td className="py-3 px-2 font-medium">{food.name}</td>
-                      <td className="py-3 px-2 text-right font-mono">{food.count || 1}</td>
-                      <td className="py-3 px-2 text-right text-electric font-mono">{getTotalCalories(food)}</td>
-                      <td className="py-3 px-2 text-right text-coral font-mono">{getTotalProtein(food)}g</td>
-                      <td className="py-3 px-2 text-right text-amber-glow font-mono">{getTotalCarbs(food)}g</td>
-                      <td className="py-3 px-2 text-right text-neon-cyan font-mono">{getTotalFat(food)}g</td>
-                      <td className="py-3 px-2 text-right">
-                        <button
-                          onClick={() => handleEdit(food)}
-                          className="text-gray-500 hover:text-electric transition-all mr-2 opacity-0 group-hover:opacity-100"
-                        >
-                          ✎
-                        </button>
-                        <button
-                          onClick={() => handleDelete(food.id)}
-                          className="text-gray-500 hover:text-coral transition-all opacity-0 group-hover:opacity-100"
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {foods.length > 100 && (
-                <p className="text-center text-gray-500 text-sm py-4">
-                  Showing 100 of {foods.length} entries
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <p className="text-4xl mb-2">🍎</p>
-              <p>No food data yet</p>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
