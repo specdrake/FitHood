@@ -59,18 +59,30 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
   const [weights, setWeights] = useState<WeightEntry[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [dateRange, setDateRange] = useState(7);
+  const [isCustomRange, setIsCustomRange] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (userId) {
       loadData();
     }
-  }, [userId, dateRange, refreshTrigger]);
+  }, [userId, dateRange, isCustomRange, customStartDate, customEndDate, refreshTrigger]);
 
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const { startDate, endDate } = getDateRange(dateRange);
+      let startDate: string, endDate: string;
+      
+      if (isCustomRange && customStartDate && customEndDate) {
+        startDate = customStartDate;
+        endDate = customEndDate;
+      } else {
+        const range = getDateRange(dateRange);
+        startDate = range.startDate;
+        endDate = range.endDate;
+      }
       const [foods, workouts, weightData, profile, dayCompletions] = await Promise.all([
         getFoodsByDateRange(userId, startDate, endDate),
         getWorkoutsByDateRange(userId, startDate, endDate),
@@ -164,15 +176,22 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
   const bmr = calculateBMR();
   const dailyTdee = userProfile ? bmr * (ACTIVITY_MULTIPLIERS[userProfile.activityLevel] || 1.55) : 0;
   
-  // Calculate TOTAL deficit for selected period (dateRange)
-  // Formula: Deficit = Calories In - (TDEE + Workout Burned)
-  // TDEE = daily TDEE × selected period (7, 14, or 30 days)
-  const totalTdee = dailyTdee * dateRange;
-  const totalExpenditure = totalTdee + totalCaloriesBurned;
-  const totalDeficit = dailyTdee > 0 ? Math.round(totalCalories - totalExpenditure) : 0;
+  // Calculate TOTAL deficit by summing up each day's actual deficit
+  // Formula: Daily Deficit = Calories In - (TDEE + Workout Burned)
+  // Sum up each day in the summaries array
+  const totalDeficit = summaries.reduce((total, day) => {
+    const dayCaloriesIn = day.totalCalories;
+    const dayWorkoutBurned = day.workoutEntries.reduce((sum, w) => sum + (w.caloriesBurned || 0), 0);
+    const dayExpenditure = dailyTdee + dayWorkoutBurned;
+    const dayDeficit = dayCaloriesIn - dayExpenditure;
+    return total + dayDeficit;
+  }, 0);
   
-  // Daily average for display
-  const avgDailyDeficit = dateRange > 0 ? Math.round(totalDeficit / dateRange) : 0;
+  // For display in summary table
+  const actualDaysInRange = summaries.length;
+  const totalTdee = dailyTdee * actualDaysInRange; // Total TDEE for the period
+  const totalExpenditure = totalTdee + totalCaloriesBurned; // Total expenditure
+  const avgDailyDeficit = actualDaysInRange > 0 ? Math.round(totalDeficit / actualDaysInRange) : 0;
 
   const macroPercentages = getMacroPercentages(totalProtein, totalCarbs, totalFat);
   const macroData = [
@@ -208,13 +227,16 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
           <h2 className="font-display text-4xl text-gradient">Dashboard</h2>
           <p className="text-gray-400">Your fitness overview</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {[7, 14, 30].map((days) => (
             <button
               key={days}
-              onClick={() => setDateRange(days)}
+              onClick={() => {
+                setIsCustomRange(false);
+                setDateRange(days);
+              }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                dateRange === days
+                dateRange === days && !isCustomRange
                   ? 'bg-electric text-midnight'
                   : 'glass hover:bg-white/10'
               }`}
@@ -222,8 +244,38 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
               {days}D
             </button>
           ))}
+          <button
+            onClick={() => setIsCustomRange(!isCustomRange)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              isCustomRange
+                ? 'bg-electric text-midnight'
+                : 'glass hover:bg-white/10'
+            }`}
+          >
+            Custom
+          </button>
         </div>
       </div>
+
+      {/* Custom Date Range Picker */}
+      {isCustomRange && (
+        <div className="glass rounded-xl p-4 flex flex-wrap items-center gap-3">
+          <label className="text-sm text-gray-400">From:</label>
+          <input
+            type="date"
+            value={customStartDate}
+            onChange={(e) => setCustomStartDate(e.target.value)}
+            className="px-3 py-1.5 rounded-lg bg-midnight border border-white/10 text-white text-sm focus:border-electric focus:outline-none"
+          />
+          <label className="text-sm text-gray-400">To:</label>
+          <input
+            type="date"
+            value={customEndDate}
+            onChange={(e) => setCustomEndDate(e.target.value)}
+            className="px-3 py-1.5 rounded-lg bg-midnight border border-white/10 text-white text-sm focus:border-electric focus:outline-none"
+          />
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -252,10 +304,12 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${totalDeficit < 0 ? 'bg-electric/20' : 'bg-coral/20'}`}>
               {totalDeficit < 0 ? '📉' : '📈'}
             </div>
-            <span className="text-gray-400 text-sm">{dateRange}D Deficit</span>
+            <span className="text-gray-400 text-sm">
+              {isCustomRange ? 'Custom' : `${actualDaysInRange}D`} Deficit
+            </span>
           </div>
           <p className={`text-3xl font-bold font-mono ${totalDeficit < 0 ? 'text-electric' : 'text-coral'}`}>
-            {totalDeficit !== 0 ? totalDeficit.toLocaleString() : '--'}
+            {totalDeficit !== 0 ? Math.round(totalDeficit).toLocaleString() : '--'}
           </p>
           <p className="text-xs text-gray-500 mt-1">
             {totalDeficit !== 0 ? `${avgDailyDeficit.toLocaleString()}/day avg` : 'Set profile first'}
@@ -514,13 +568,13 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
                 })}
                 {/* Total Row */}
                 <tr className="border-t-2 border-white/20 font-bold">
-                  <td className="py-3 px-2">Total ({dateRange}D)</td>
+                  <td className="py-3 px-2">Total ({actualDaysInRange}D)</td>
                   <td className="text-right py-3 px-2 font-mono">{totalCalories.toLocaleString()}</td>
                   <td className="text-right py-3 px-2 font-mono text-amber-400">{Math.round(totalTdee).toLocaleString()}</td>
                   <td className="text-right py-3 px-2 font-mono text-coral">{totalCaloriesBurned.toLocaleString()}</td>
                   <td className="text-right py-3 px-2 font-mono">{Math.round(totalExpenditure).toLocaleString()}</td>
                   <td className={`text-right py-3 px-2 font-mono ${totalDeficit < 0 ? 'text-electric' : 'text-coral'}`}>
-                    {totalDeficit.toLocaleString()}
+                    {Math.round(totalDeficit).toLocaleString()}
                   </td>
                 </tr>
               </tbody>
