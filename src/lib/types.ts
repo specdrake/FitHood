@@ -50,6 +50,7 @@ export interface DailySummary {
   foodEntries: FoodEntry[];
   workoutEntries: WorkoutEntry[];
   weight?: number;
+  isComplete?: boolean; // Mark day as done for accurate averages
 }
 
 // Chart data types

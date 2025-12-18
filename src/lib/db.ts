@@ -306,6 +306,43 @@ function mapWeightRow(row: Record<string, unknown>): WeightEntry {
   };
 }
 
+// Day completion tracking
+export async function markDayComplete(userId: string, date: string, isComplete: boolean): Promise<void> {
+  const supabase = getSupabase();
+  
+  const { error } = await supabase
+    .from('day_completions')
+    .upsert({ 
+      user_id: userId, 
+      date, 
+      is_complete: isComplete,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,date' });
+
+  if (error) {
+    console.error('Mark day complete error:', error);
+    throw error;
+  }
+}
+
+export async function getDayCompletions(userId: string, startDate: string, endDate: string): Promise<Map<string, boolean>> {
+  const supabase = getSupabase();
+  
+  const { data, error } = await supabase
+    .from('day_completions')
+    .select('date, is_complete')
+    .eq('user_id', userId)
+    .gte('date', startDate)
+    .lte('date', endDate);
+
+  if (error) {
+    console.error('Get day completions error:', error);
+    return new Map();
+  }
+
+  return new Map((data || []).map((d: { date: string; is_complete: boolean }) => [d.date, d.is_complete]));
+}
+
 // User Profile operations
 import { UserProfile } from './types';
 

@@ -17,7 +17,7 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import { getFoodsByDateRange, getWorkoutsByDateRange, getAllWeights, getUserProfile } from '@/lib/db';
+import { getFoodsByDateRange, getWorkoutsByDateRange, getAllWeights, getUserProfile, getDayCompletions, markDayComplete } from '@/lib/db';
 import { FoodEntry, WorkoutEntry, WeightEntry, DailySummary, UserProfile } from '@/lib/types';
 import { formatDisplayDate, getDateRange, groupByDate, calculateDailySummary, getMacroPercentages } from '@/lib/utils';
 import HealthCalculator from './HealthCalculator';
@@ -71,16 +71,18 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
     setIsLoading(true);
     try {
       const { startDate, endDate } = getDateRange(dateRange);
-      const [foods, workouts, weightData, profile] = await Promise.all([
+      const [foods, workouts, weightData, profile, dayCompletions] = await Promise.all([
         getFoodsByDateRange(userId, startDate, endDate),
         getWorkoutsByDateRange(userId, startDate, endDate),
         getAllWeights(userId),
         getUserProfile(userId),
+        getDayCompletions(userId, startDate, endDate),
       ]);
 
       const foodsByDate = groupByDate(foods);
       const workoutsByDate = groupByDate(workouts);
       const weightsByDate = new Map(weightData.map((w) => [w.date, w.weight]));
+      const today = new Date().toISOString().split('T')[0];
 
       // Generate summaries for each day in range
       const summaryList: DailySummary[] = [];
@@ -93,7 +95,15 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
         const dayWorkouts = workoutsByDate.get(dateStr) || [];
         const dayWeight = weightsByDate.get(dateStr);
 
-        summaryList.push(calculateDailySummary(dateStr, dayFoods, dayWorkouts, dayWeight));
+        // Auto-mark: past days with data are complete, today is not complete unless manually marked
+        const hasCompletion = dayCompletions.has(dateStr);
+        const isComplete = hasCompletion 
+          ? dayCompletions.get(dateStr)! 
+          : (dateStr < today && dayFoods.length > 0); // Auto-complete past days with food
+
+        const summary = calculateDailySummary(dateStr, dayFoods, dayWorkouts, dayWeight);
+        summary.isComplete = isComplete;
+        summaryList.push(summary);
         current.setDate(current.getDate() + 1);
       }
 
@@ -107,16 +117,31 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
     }
   };
 
+  const handleToggleDayComplete = async (date: string, isComplete: boolean) => {
+    try {
+      await markDayComplete(userId, date, isComplete);
+      // Update local state
+      setSummaries(prev => prev.map(s => 
+        s.date === date ? { ...s, isComplete } : s
+      ));
+    } catch (error) {
+      console.error('Failed to toggle day completion:', error);
+    }
+  };
+
   const totalCalories = summaries.reduce((sum, s) => sum + s.totalCalories, 0);
   const totalProtein = summaries.reduce((sum, s) => sum + s.totalProtein, 0);
   const totalCarbs = summaries.reduce((sum, s) => sum + s.totalCarbs, 0);
   const totalFat = summaries.reduce((sum, s) => sum + s.totalFat, 0);
   
-  // Only count days that have actual data for averages
-  const daysWithCalories = summaries.filter(s => s.totalCalories > 0).length;
-  const daysWithProtein = summaries.filter(s => s.totalProtein > 0).length;
-  const avgCalories = daysWithCalories > 0 ? Math.round(totalCalories / daysWithCalories) : 0;
-  const avgProtein = daysWithProtein > 0 ? Math.round(totalProtein / daysWithProtein) : 0;
+  // Only count COMPLETE days for averages (excludes today and incomplete days)
+  const completeDays = summaries.filter(s => s.isComplete);
+  const completeCalories = completeDays.reduce((sum, s) => sum + s.totalCalories, 0);
+  const completeProtein = completeDays.reduce((sum, s) => sum + s.totalProtein, 0);
+  const daysWithCalories = completeDays.filter(s => s.totalCalories > 0).length;
+  const daysWithProtein = completeDays.filter(s => s.totalProtein > 0).length;
+  const avgCalories = daysWithCalories > 0 ? Math.round(completeCalories / daysWithCalories) : 0;
+  const avgProtein = daysWithProtein > 0 ? Math.round(completeProtein / daysWithProtein) : 0;
 
   // Calculate total calories burned from workouts
   const totalCaloriesBurned = summaries.reduce((sum, s) => 
@@ -451,6 +476,7 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
               <thead>
                 <tr className="border-b border-white/10">
                   <th className="text-left py-2 px-2 text-gray-400 font-medium">Date</th>
+                  <th className="text-center py-2 px-2 text-gray-400 font-medium">Done</th>
                   <th className="text-right py-2 px-2 text-gray-400 font-medium">Calories In</th>
                   <th className="text-right py-2 px-2 text-gray-400 font-medium">TDEE</th>
                   <th className="text-right py-2 px-2 text-gray-400 font-medium">Workout</th>
@@ -467,6 +493,14 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
                   return (
                     <tr key={day.date} className="border-b border-white/5 hover:bg-white/5">
                       <td className="py-2 px-2">{formatDisplayDate(day.date)}</td>
+                      <td className="text-center py-2 px-2">
+                        <input
+                          type="checkbox"
+                          checked={day.isComplete || false}
+                          onChange={(e) => handleToggleDayComplete(day.date, e.target.checked)}
+                          className="w-4 h-4 rounded border-gray-600 bg-midnight text-electric focus:ring-electric cursor-pointer"
+                        />
+                      </td>
                       <td className="text-right py-2 px-2 font-mono">
                         {day.totalCalories > 0 ? day.totalCalories.toLocaleString() : '-'}
                       </td>
