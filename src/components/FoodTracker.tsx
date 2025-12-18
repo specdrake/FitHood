@@ -626,9 +626,9 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                     </div>
                     <div className="flex items-center gap-4 text-sm font-mono">
                       <span className="text-electric">{getTotalCalories(food)} cal</span>
-                      <span className="text-coral">{getTotalProtein(food)}g P</span>
-                      <span className="text-amber-glow">{getTotalCarbs(food)}g C</span>
-                      <span className="text-neon-cyan">{getTotalFat(food)}g F</span>
+                      <span className="text-coral">{getTotalProtein(food).toFixed(1)}g P</span>
+                      <span className="text-amber-glow">{getTotalCarbs(food).toFixed(1)}g C</span>
+                      <span className="text-neon-cyan">{getTotalFat(food).toFixed(1)}g F</span>
                       <button
                         onClick={() => handleEdit(food)}
                         className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-electric transition-all"
@@ -652,16 +652,16 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                     <span>Day Total</span>
                     <div className="flex gap-4 font-mono">
                       <span className="text-electric">
-                        {selectedFoods.reduce((s, f) => s + getTotalCalories(f), 0)} cal
+                        {Math.round(selectedFoods.reduce((s, f) => s + getTotalCalories(f), 0))} cal
                       </span>
                       <span className="text-coral">
-                        {selectedFoods.reduce((s, f) => s + getTotalProtein(f), 0)}g P
+                        {selectedFoods.reduce((s, f) => s + getTotalProtein(f), 0).toFixed(1)}g P
                       </span>
                       <span className="text-amber-glow">
-                        {selectedFoods.reduce((s, f) => s + getTotalCarbs(f), 0)}g C
+                        {selectedFoods.reduce((s, f) => s + getTotalCarbs(f), 0).toFixed(1)}g C
                       </span>
                       <span className="text-neon-cyan">
-                        {selectedFoods.reduce((s, f) => s + getTotalFat(f), 0)}g F
+                        {selectedFoods.reduce((s, f) => s + getTotalFat(f), 0).toFixed(1)}g F
                       </span>
                     </div>
                   </div>
