@@ -58,17 +58,27 @@ export function calculateDailySummary(
 
 // Normalize food name for grouping similar items
 // e.g., "Buffalo Milk (350ml)" and "Buffalo Milk (250ml)" -> "buffalo milk"
+// e.g., "Milk, Buffalo (1 glass)" and "Buffalo Milk (350 ml)" -> "buffalo milk"
 export function normalizeFoodName(name: string): string {
-  return name
+  let normalized = name
     .toLowerCase()
     .trim()
-    // Remove quantities in parentheses like (350ml), (2 scoops), (100g)
-    .replace(/\s*\([^)]*\d+[^)]*\)/g, '')
+    // Remove ALL content in parentheses (not just with digits)
+    .replace(/\s*\([^)]*\)/g, '')
+    // Remove ALL content in brackets
+    .replace(/\s*\[[^\]]*\]/g, '')
     // Remove trailing numbers with units
     .replace(/\s+\d+\s*(ml|g|kg|oz|cups?|pieces?|slices?|scoops?|tbsp|tsp|small|medium|large)s?\s*$/i, '')
+    // Remove commas
+    .replace(/,/g, '')
     // Normalize whitespace
     .replace(/\s+/g, ' ')
     .trim();
+  
+  // Sort words alphabetically to handle different word orders
+  // "milk buffalo" and "buffalo milk" both become "buffalo milk"
+  const words = normalized.split(' ').sort();
+  return words.join(' ');
 }
 
 export function calculateFoodContributions(foods: FoodEntry[]): FoodContribution[] {
