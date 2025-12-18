@@ -63,10 +63,13 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
 
   useEffect(() => {
     if (userId) {
       loadData();
+      setCurrentPage(1); // Reset to first page when date range changes
     }
   }, [userId, dateRange, isCustomRange, customStartDate, customEndDate, refreshTrigger]);
 
@@ -525,70 +528,137 @@ export default function Dashboard({ userId, refreshTrigger }: DashboardProps) {
       )}
 
       {/* Daily Deficit Table */}
-      {dailyTdee > 0 && summaries.length > 0 && (
-        <div className="glass rounded-2xl p-6">
-          <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-            <span>📊</span> Daily Deficit Breakdown
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left py-2 px-2 text-gray-400 font-medium">Date</th>
-                  <th className="text-right py-2 px-2 text-gray-400 font-medium">Calories In</th>
-                  <th className="text-right py-2 px-2 text-gray-400 font-medium">TDEE</th>
-                  <th className="text-right py-2 px-2 text-gray-400 font-medium">Workout</th>
-                  <th className="text-right py-2 px-2 text-gray-400 font-medium">Total Out</th>
-                  <th className="text-right py-2 px-2 text-gray-400 font-medium">Deficit</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summaries.map((day) => {
-                  const dayBurned = day.workoutEntries.reduce((sum, w) => sum + (w.caloriesBurned || 0), 0);
-                  const dayOut = dailyTdee + dayBurned;
-                  const dayDeficit = day.totalCalories - dayOut;
-                  
-                  return (
-                    <tr key={day.date} className="border-b border-white/5 hover:bg-white/5">
-                      <td className="py-2 px-2">{formatDisplayDate(day.date)}</td>
-                      <td className="text-right py-2 px-2 font-mono">
-                        {day.totalCalories > 0 ? day.totalCalories.toLocaleString() : '-'}
-                      </td>
-                      <td className="text-right py-2 px-2 font-mono text-amber-400">
-                        {Math.round(dailyTdee).toLocaleString()}
-                      </td>
-                      <td className="text-right py-2 px-2 font-mono text-coral">
-                        {dayBurned > 0 ? dayBurned.toLocaleString() : '-'}
-                      </td>
-                      <td className="text-right py-2 px-2 font-mono">
-                        {Math.round(dayOut).toLocaleString()}
-                      </td>
-                      <td className={`text-right py-2 px-2 font-mono font-bold ${
-                        dayDeficit < 0 ? 'text-electric' : dayDeficit > 0 ? 'text-coral' : 'text-gray-500'
-                      }`}>
-                        {day.totalCalories > 0 ? dayDeficit.toLocaleString() : '-'}
-                      </td>
-                    </tr>
-                  );
-                })}
-                {/* Total Row */}
-                <tr className="border-t-2 border-white/20 font-bold">
-                  <td className="py-3 px-2">
-                    Total ({daysWithDataCount}D logged)
-                  </td>
-                  <td className="text-right py-3 px-2 font-mono">{totalCalories.toLocaleString()}</td>
-                  <td className="text-right py-3 px-2 font-mono text-amber-400">{Math.round(totalTdee).toLocaleString()}</td>
-                  <td className="text-right py-3 px-2 font-mono text-coral">{totalCaloriesBurned.toLocaleString()}</td>
-                  <td className="text-right py-3 px-2 font-mono">{Math.round(totalExpenditure).toLocaleString()}</td>
-                  <td className={`text-right py-3 px-2 font-mono ${totalDeficit < 0 ? 'text-electric' : 'text-coral'}`}>
-                    {Math.round(totalDeficit).toLocaleString()}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+      {dailyTdee > 0 && summaries.length > 0 && (() => {
+        // Pagination logic
+        const totalPages = Math.ceil(summaries.length / itemsPerPage);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginatedSummaries = summaries.slice(startIndex, endIndex);
+        
+        return (
+          <div className="glass rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <span>📊</span> Daily Deficit Breakdown
+              </h3>
+              {summaries.length > itemsPerPage && (
+                <span className="text-sm text-gray-400">
+                  Showing {startIndex + 1}-{Math.min(endIndex, summaries.length)} of {summaries.length} days
+                </span>
+              )}
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="text-left py-2 px-2 text-gray-400 font-medium">Date</th>
+                    <th className="text-right py-2 px-2 text-gray-400 font-medium">Calories In</th>
+                    <th className="text-right py-2 px-2 text-gray-400 font-medium">TDEE</th>
+                    <th className="text-right py-2 px-2 text-gray-400 font-medium">Workout</th>
+                    <th className="text-right py-2 px-2 text-gray-400 font-medium">Total Out</th>
+                    <th className="text-right py-2 px-2 text-gray-400 font-medium">Deficit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedSummaries.map((day) => {
+                    const dayBurned = day.workoutEntries.reduce((sum, w) => sum + (w.caloriesBurned || 0), 0);
+                    const dayOut = dailyTdee + dayBurned;
+                    const dayDeficit = day.totalCalories - dayOut;
+                    
+                    return (
+                      <tr key={day.date} className="border-b border-white/5 hover:bg-white/5">
+                        <td className="py-2 px-2">{formatDisplayDate(day.date)}</td>
+                        <td className="text-right py-2 px-2 font-mono">
+                          {day.totalCalories > 0 ? day.totalCalories.toLocaleString() : '-'}
+                        </td>
+                        <td className="text-right py-2 px-2 font-mono text-amber-400">
+                          {Math.round(dailyTdee).toLocaleString()}
+                        </td>
+                        <td className="text-right py-2 px-2 font-mono text-coral">
+                          {dayBurned > 0 ? dayBurned.toLocaleString() : '-'}
+                        </td>
+                        <td className="text-right py-2 px-2 font-mono">
+                          {Math.round(dayOut).toLocaleString()}
+                        </td>
+                        <td className={`text-right py-2 px-2 font-mono font-bold ${
+                          dayDeficit < 0 ? 'text-electric' : dayDeficit > 0 ? 'text-coral' : 'text-gray-500'
+                        }`}>
+                          {day.totalCalories > 0 ? dayDeficit.toLocaleString() : '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {/* Total Row (always visible) */}
+                  <tr className="border-t-2 border-white/20 font-bold">
+                    <td className="py-3 px-2">
+                      Total ({daysWithDataCount}D logged)
+                    </td>
+                    <td className="text-right py-3 px-2 font-mono">{totalCalories.toLocaleString()}</td>
+                    <td className="text-right py-3 px-2 font-mono text-amber-400">{Math.round(totalTdee).toLocaleString()}</td>
+                    <td className="text-right py-3 px-2 font-mono text-coral">{totalCaloriesBurned.toLocaleString()}</td>
+                    <td className="text-right py-3 px-2 font-mono">{Math.round(totalExpenditure).toLocaleString()}</td>
+                    <td className={`text-right py-3 px-2 font-mono ${totalDeficit < 0 ? 'text-electric' : 'text-coral'}`}>
+                      {Math.round(totalDeficit).toLocaleString()}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 rounded-lg glass hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-sm transition-all"
+                >
+                  ← Previous
+                </button>
+                
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                    // Show first page, last page, current page, and pages around current
+                    if (
+                      page === 1 ||
+                      page === totalPages ||
+                      (page >= currentPage - 1 && page <= currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${
+                            currentPage === page
+                              ? 'bg-electric text-midnight'
+                              : 'glass hover:bg-white/10'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    } else if (
+                      page === currentPage - 2 ||
+                      page === currentPage + 2
+                    ) {
+                      return <span key={page} className="text-gray-500">...</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 rounded-lg glass hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-sm transition-all"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* BMI/BMR Calculator & Deficit Tracker */}
       <HealthCalculator 
