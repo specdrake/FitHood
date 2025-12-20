@@ -917,6 +917,66 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                   </ResponsiveContainer>
                 </div>
               </div>
+
+              {/* Sugar & Fiber Trends Chart */}
+              <div className="glass rounded-2xl p-6">
+                <h3 className="font-semibold text-lg mb-4">🍬 Sugar & Fiber Trends (Last 14 Days)</h3>
+                <div className="h-56">
+                  {(() => {
+                    const recentFoods = foods.filter(f =>
+                      new Date(f.date) >= new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+                    );
+                    const sugarFiberData = recentFoods.reduce((acc, food) => {
+                      const existing = acc.get(food.date) || { sugar: 0, fiber: 0 };
+                      acc.set(food.date, {
+                        sugar: existing.sugar + (food.sugar || 0) * (food.count || 1),
+                        fiber: existing.fiber + (food.fiber || 0) * (food.count || 1),
+                      });
+                      return acc;
+                    }, new Map<string, { sugar: number; fiber: number }>());
+
+                    const chartData = Array.from(sugarFiberData.entries())
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([date, data]) => ({
+                        date: formatDisplayDate(date),
+                        sugar: Math.round(data.sugar * 10) / 10,
+                        fiber: Math.round(data.fiber * 10) / 10,
+                      }));
+
+                    return chartData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                          <XAxis dataKey="date" stroke="#666" fontSize={10} tickLine={false} />
+                          <YAxis stroke="#666" fontSize={11} tickLine={false} axisLine={false} />
+                          <Tooltip {...tooltipStyle} />
+                          <Legend wrapperStyle={{ color: '#fff', fontSize: 12 }} />
+                          <Line
+                            type="monotone"
+                            dataKey="sugar"
+                            name="Sugar (g)"
+                            stroke="#ec4899"
+                            strokeWidth={2}
+                            dot={{ fill: '#ec4899', r: 3 }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="fiber"
+                            name="Fiber (g)"
+                            stroke="#10b981"
+                            strokeWidth={2}
+                            dot={{ fill: '#10b981', r: 3 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-gray-500">
+                        <p>No sugar/fiber data in last 14 days</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
             </>
           )}
         </>
@@ -942,11 +1002,9 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
 
         const getDailyMacros = () => {
           const filtered = getFilteredFoods();
-          console.log('Filtered foods for sugar/fiber chart:', filtered);
           const dailyMap = new Map<string, { sugar: number; fiber: number }>();
 
           filtered.forEach(food => {
-            console.log(`Food: ${food.name}, sugar: ${food.sugar}, fiber: ${food.fiber}`);
             const existing = dailyMap.get(food.date) || { sugar: 0, fiber: 0 };
             dailyMap.set(food.date, {
               sugar: existing.sugar + (food.sugar || 0) * (food.count || 1),
@@ -954,15 +1012,13 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
             });
           });
 
-          const result = Array.from(dailyMap.entries())
+          return Array.from(dailyMap.entries())
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([date, data]) => ({
               date,
               sugar: Math.round(data.sugar * 10) / 10,
               fiber: Math.round(data.fiber * 10) / 10,
             }));
-          console.log('Daily macros data:', result);
-          return result;
         };
         
         const filteredFoods = getFilteredFoods();
@@ -1116,61 +1172,6 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                   <p className="text-center text-gray-500 py-4">No data for selected range</p>
                 )}
               </div>
-            </div>
-          </div>
-
-          {/* Sugar & Fiber Tracking Chart */}
-          <div className="glass rounded-2xl p-6">
-            <h3 className="font-semibold text-lg mb-4">🍬 Sugar & Fiber Intake Trend</h3>
-            <div className="h-64">
-              {(() => {
-                const dailyData = getDailyMacros();
-                return dailyData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={dailyData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
-                      <XAxis
-                        dataKey="date"
-                        stroke="#ffffff60"
-                        fontSize={12}
-                        tickFormatter={(date) => formatDisplayDate(date)}
-                      />
-                      <YAxis stroke="#ffffff60" fontSize={12} />
-                      <Tooltip
-                        {...tooltipStyle}
-                        labelFormatter={(date) => formatDisplayDate(date)}
-                        formatter={(value: number, name: string) => [
-                          `${value.toFixed(1)}g`,
-                          name === 'sugar' ? 'Sugar' : 'Fiber'
-                        ]}
-                      />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="sugar"
-                        stroke="#ec4899"
-                        strokeWidth={2}
-                        name="Sugar"
-                        dot={{ fill: '#ec4899', strokeWidth: 2, r: 4 }}
-                        activeDot={{ r: 6 }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="fiber"
-                        stroke="#10b981"
-                        strokeWidth={2}
-                        name="Fiber"
-                        dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
-                        activeDot={{ r: 6 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-gray-500">
-                    <p>No sugar/fiber data for selected range</p>
-                  </div>
-                );
-              })()}
             </div>
           </div>
         </>
