@@ -942,9 +942,11 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
 
         const getDailyMacros = () => {
           const filtered = getFilteredFoods();
+          console.log('Filtered foods for sugar/fiber chart:', filtered);
           const dailyMap = new Map<string, { sugar: number; fiber: number }>();
 
           filtered.forEach(food => {
+            console.log(`Food: ${food.name}, sugar: ${food.sugar}, fiber: ${food.fiber}`);
             const existing = dailyMap.get(food.date) || { sugar: 0, fiber: 0 };
             dailyMap.set(food.date, {
               sugar: existing.sugar + (food.sugar || 0) * (food.count || 1),
@@ -952,13 +954,15 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
             });
           });
 
-          return Array.from(dailyMap.entries())
+          const result = Array.from(dailyMap.entries())
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([date, data]) => ({
               date,
               sugar: Math.round(data.sugar * 10) / 10,
               fiber: Math.round(data.fiber * 10) / 10,
             }));
+          console.log('Daily macros data:', result);
+          return result;
         };
         
         const filteredFoods = getFilteredFoods();
