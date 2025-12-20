@@ -281,6 +281,8 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
               protein: f.protein,
               carbs: f.carbs,
               fat: f.fat,
+              fiber: undefined, // FatSecret API doesn't provide fiber/sugar
+              sugar: undefined, // FatSecret API doesn't provide fiber/sugar
               category: 'cooked' as const,
               servingSize: f.serving,
             })));
@@ -579,7 +581,7 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                         {apiSuggestions.length > 0 && (
                           <>
                             <div className="px-3 py-1.5 text-xs text-coral bg-coral/10 sticky top-0">
-                              🌐 FatSecret ({apiSuggestions.length})
+                              🌐 FatSecret - Limited Data ({apiSuggestions.length})
                             </div>
                             {apiSuggestions.map((food, i) => (
                               <button
@@ -593,6 +595,7 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                                   {food.calories} cal · {food.protein.toFixed(1)}g P
                                   {food.fiber && ` · ${food.fiber.toFixed(1)}g Fiber`}
                                   {food.sugar && ` · ${food.sugar.toFixed(1)}g Sugar`}
+                                  {!food.fiber && !food.sugar && ' · (No fiber/sugar data)'}
                                 </span>
                                 {food.servingSize && <span className="text-gray-500 ml-1 text-xs">({food.servingSize})</span>}
                               </button>

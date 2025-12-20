@@ -209,7 +209,7 @@ const COOKED_FOODS: FoodItem[] = [
   { name: 'Green Tea (1 cup)', calories: 2, protein: 0, carbs: 0, fat: 0, category: 'beverages', servingSize: '150ml' },
   { name: 'Nimbu Pani (1 glass)', calories: 30, protein: 0, carbs: 8, fat: 0, category: 'beverages', servingSize: '200ml' },
   { name: 'Coconut Water (1 glass)', calories: 45, protein: 2, carbs: 9, fat: 0, sugar: 7.0, category: 'beverages', servingSize: '200ml' },
-  { name: 'Mango Shake (1 glass)', calories: 250, protein: 6, carbs: 45, fat: 6, category: 'beverages', servingSize: '250ml' },
+  { name: 'Mango Shake (1 glass)', calories: 250, protein: 6, carbs: 45, fat: 6, fiber: 1.2, sugar: 35, category: 'beverages', servingSize: '250ml' },
   { name: 'Banana Shake (1 glass)', calories: 220, protein: 8, carbs: 35, fat: 6, category: 'beverages', servingSize: '250ml' },
 
   // Sweets
