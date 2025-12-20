@@ -47,6 +47,8 @@ type FormState = {
   protein: string;
   carbs: string;
   fat: string;
+  fiber: string;
+  sugar: string;
   count: string;
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
 };
@@ -57,6 +59,8 @@ const emptyForm: FormState = {
   protein: '',
   carbs: '',
   fat: '',
+  fiber: '',
+  sugar: '',
   count: '1',
   mealType: 'snack',
 };
@@ -173,6 +177,8 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
       protein: String(food.protein),
       carbs: String(food.carbs),
       fat: String(food.fat),
+      fiber: String(food.fiber || ''),
+      sugar: String(food.sugar || ''),
       count: String(food.count || 1),
       mealType: food.mealType || 'snack',
     });
@@ -189,6 +195,8 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
       protein: parseFloat(formData.protein) || 0,
       carbs: parseFloat(formData.carbs) || 0,
       fat: parseFloat(formData.fat) || 0,
+      fiber: parseFloat(formData.fiber) || undefined,
+      sugar: parseFloat(formData.sugar) || undefined,
       count: parseFloat(formData.count) || 1, // Allow fractional servings
       mealType: formData.mealType,
     };
@@ -236,6 +244,8 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
               protein: food.protein,
               carbs: food.carbs,
               fat: food.fat,
+              fiber: food.fiber,
+              sugar: food.sugar,
               category: 'cooked' as const,
               servingSize: undefined,
             });
@@ -296,6 +306,8 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
       protein: String(food.protein),
       carbs: String(food.carbs),
       fat: String(food.fat),
+      fiber: String(food.fiber || ''),
+      sugar: String(food.sugar || ''),
     });
     setFoodSuggestions([]);
     setApiSuggestions([]);
@@ -308,6 +320,8 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
       protein: String(food.protein),
       carbs: String(food.carbs),
       fat: String(food.fat),
+      fiber: String(food.fiber || ''),
+      sugar: String(food.sugar || ''),
       count: '1',
       mealType: 'snack',
     });
@@ -551,7 +565,11 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                                 className="w-full px-3 py-2 text-left hover:bg-white/10 text-sm border-b border-white/5"
                               >
                                 <span className="font-medium">{food.name}</span>
-                                <span className="text-gray-400 ml-2 text-xs">{food.calories} cal · {food.protein.toFixed(1)}g P</span>
+                                <span className="text-gray-400 ml-2 text-xs">
+                                  {food.calories} cal · {food.protein.toFixed(1)}g P
+                                  {food.fiber && ` · ${food.fiber.toFixed(1)}g Fiber`}
+                                  {food.sugar && ` · ${food.sugar.toFixed(1)}g Sugar`}
+                                </span>
                                 {food.servingSize && <span className="text-gray-500 ml-1 text-xs">({food.servingSize})</span>}
                               </button>
                             ))}
@@ -571,7 +589,11 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                                 className="w-full px-3 py-2 text-left hover:bg-white/10 text-sm border-b border-white/5"
                               >
                                 <span className="font-medium">{food.name}</span>
-                                <span className="text-gray-400 ml-2 text-xs">{food.calories} cal · {food.protein.toFixed(1)}g P</span>
+                                <span className="text-gray-400 ml-2 text-xs">
+                                  {food.calories} cal · {food.protein.toFixed(1)}g P
+                                  {food.fiber && ` · ${food.fiber.toFixed(1)}g Fiber`}
+                                  {food.sugar && ` · ${food.sugar.toFixed(1)}g Sugar`}
+                                </span>
                                 {food.servingSize && <span className="text-gray-500 ml-1 text-xs">({food.servingSize})</span>}
                               </button>
                             ))}
@@ -630,6 +652,30 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                       value={formData.fat}
                       onChange={(e) => setFormData({ ...formData, fat: e.target.value })}
                       placeholder="0g"
+                      className="w-full px-3 py-2.5 sm:py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1 font-medium">Fiber (optional)</label>
+                    <input
+                      type="number"
+                      value={formData.fiber}
+                      onChange={(e) => setFormData({ ...formData, fiber: e.target.value })}
+                      placeholder="0g"
+                      step="0.1"
+                      min="0"
+                      className="w-full px-3 py-2.5 sm:py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1 font-medium">Sugar (optional)</label>
+                    <input
+                      type="number"
+                      value={formData.sugar}
+                      onChange={(e) => setFormData({ ...formData, sugar: e.target.value })}
+                      placeholder="0g"
+                      step="0.1"
+                      min="0"
                       className="w-full px-3 py-2.5 sm:py-2 rounded-lg bg-midnight border border-white/10 focus:border-coral focus:outline-none text-sm"
                     />
                   </div>
