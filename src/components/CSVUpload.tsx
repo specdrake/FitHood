@@ -107,7 +107,7 @@ export default function CSVUpload({ userId, onUploadComplete }: CSVUploadProps) 
               <div className="text-4xl mb-3">📤</div>
               <p className="text-sm text-gray-400">Click to upload food CSV</p>
               <p className="text-xs text-gray-500 mt-2">
-                Columns: date, name, calories, protein, carbs, fat
+                Columns: date, name, calories, protein, carbs, fat (+ fiber, sugar, count, mealType)
               </p>
             </div>
           </label>
@@ -137,7 +137,7 @@ export default function CSVUpload({ userId, onUploadComplete }: CSVUploadProps) 
               <div className="text-4xl mb-3">📤</div>
               <p className="text-sm text-gray-400">Click to upload workout CSV</p>
               <p className="text-xs text-gray-500 mt-2">
-                Columns: date, exercise, category, sets, reps, weight, caloriesBurned
+                Columns: date, exercise, category, sets, reps, weight (+ duration, distance, notes)
               </p>
             </div>
           </label>
@@ -246,20 +246,26 @@ export default function CSVUpload({ userId, onUploadComplete }: CSVUploadProps) 
           <div>
             <h4 className="text-electric font-medium mb-2">Food CSV</h4>
             <pre className="bg-midnight/50 p-3 rounded-lg overflow-x-auto text-xs text-gray-400">
-{`date,name,calories,protein,carbs,fat
-2024-01-15,Chicken Breast,165,31,0,3.6
-2024-01-15,Brown Rice,216,5,45,1.8
-2024-01-15,Broccoli,55,4,11,0.5`}
+{`date,name,calories,protein,carbs,fat,fiber,sugar,count,mealType
+2024-01-15,"Greek Yogurt (Plain)",150,15,8,5,0,6,1,snack
+2024-01-15,"Chicken Breast (Grilled)",165,31,0,3.6,0,0,0.5,lunch
+2024-01-15,"Brown Rice (Cooked)",216,5,45,1.8,1.8,0.7,1,dinner
+2024-01-15,"Broccoli (Steamed)",55,4,11,0.5,5.1,1.7,2,lunch
+2024-01-15,"Banana",105,1.3,27,0.4,3.1,14.4,1,breakfast`}
             </pre>
+            <p className="text-xs text-gray-500 mt-2">* All columns are optional except date and name. Fiber, sugar, count, and mealType are optional.</p>
           </div>
           <div>
             <h4 className="text-neon-cyan font-medium mb-2">Workout CSV</h4>
             <pre className="bg-midnight/50 p-3 rounded-lg overflow-x-auto text-xs text-gray-400">
-{`date,exercise,category,sets,reps,weight,caloriesBurned
-2024-01-15,Bench Press,strength,4,10,60,150
-2024-01-15,Squats,strength,4,8,80,200
-2024-01-15,Running,cardio,1,,,300`}
+{`date,exercise,category,sets,reps,weight,duration,distance,caloriesBurned,notes
+2024-01-15,"Bench Press",strength,4,10,60,,,150,"Barbell press"
+2024-01-15,"Squats",strength,4,8,80,,,200,"Barbell back squats"
+2024-01-15,"Running",cardio,,,"",30,5,300,"Morning run"
+2024-01-15,"Yoga Flow",flexibility,,,"",45,,120,"Vinyasa flow class"
+2024-01-15,"Push-ups",strength,3,15,,,,,"Bodyweight exercise"`}
             </pre>
+            <p className="text-xs text-gray-500 mt-2">* All columns are optional except date and exercise. Sets, reps, weight, duration, distance, caloriesBurned, and notes are optional.</p>
           </div>
         </div>
       </div>
