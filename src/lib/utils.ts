@@ -50,6 +50,7 @@ export function calculateDailySummary(
     totalCarbs: foods.reduce((sum, f) => sum + getTotal(f, f.carbs), 0),
     totalFat: foods.reduce((sum, f) => sum + getTotal(f, f.fat), 0),
     totalFiber: foods.reduce((sum, f) => sum + getTotal(f, f.fiber || 0), 0),
+    totalSugar: foods.reduce((sum, f) => sum + getTotal(f, f.sugar || 0), 0),
     foodEntries: foods,
     workoutEntries: workouts,
     weight,

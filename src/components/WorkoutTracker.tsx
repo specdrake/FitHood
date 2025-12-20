@@ -121,7 +121,8 @@ export default function WorkoutTracker({ userId, refreshTrigger }: WorkoutTracke
   };
 
   const handleDeleteAllDay = async () => {
-    if (confirm(`Delete all ${selectedWorkouts.length} workout entries for ${formatDisplayDate(selectedDate)}?`)) {
+    if (confirm(`Delete all ${selectedWorkouts.length} workout entries for ${formatDisplayDate(selectedDate)}?`) &&
+        confirm(`⚠️ This action cannot be undone. Are you absolutely sure you want to delete all ${selectedWorkouts.length} entries?`)) {
       for (const workout of selectedWorkouts) {
         await deleteWorkoutEntry(workout.id);
       }

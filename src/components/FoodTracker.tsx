@@ -14,6 +14,7 @@ import {
   Cell,
   ComposedChart,
   Line,
+  LineChart,
   Legend,
 } from 'recharts';
 import { getAllFoods, deleteFoodEntry, addFoodEntries, updateFoodEntry, markDayComplete, getDayCompletions } from '@/lib/db';
@@ -154,7 +155,8 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
   };
 
   const handleDeleteAllDay = async () => {
-    if (confirm(`Delete all ${selectedFoods.length} food entries for ${formatDisplayDate(selectedDate)}?`)) {
+    if (confirm(`Delete all ${selectedFoods.length} food entries for ${formatDisplayDate(selectedDate)}?`) &&
+        confirm(`⚠️ This action cannot be undone. Are you absolutely sure you want to delete all ${selectedFoods.length} entries?`)) {
       for (const food of selectedFoods) {
         await deleteFoodEntry(food.id);
       }
@@ -698,6 +700,16 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                       <span className="text-neon-cyan">
                         {selectedFoods.reduce((s, f) => s + getTotalFat(f), 0).toFixed(1)}g F
                       </span>
+                      {selectedFoods.some(f => f.fiber) && (
+                        <span className="text-green-400">
+                          {selectedFoods.reduce((s, f) => s + (f.fiber || 0) * (f.count || 1), 0).toFixed(1)}g Fiber
+                        </span>
+                      )}
+                      {selectedFoods.some(f => f.sugar) && (
+                        <span className="text-pink-400">
+                          {selectedFoods.reduce((s, f) => s + (f.sugar || 0) * (f.count || 1), 0).toFixed(1)}g Sugar
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -727,6 +739,12 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                         <span className="text-coral">{getTotalProtein(food).toFixed(1)}g P</span>
                         <span className="text-amber-glow hidden sm:inline">{getTotalCarbs(food).toFixed(1)}g C</span>
                         <span className="text-neon-cyan hidden sm:inline">{getTotalFat(food).toFixed(1)}g F</span>
+                        {food.fiber && food.fiber > 0 && (
+                          <span className="text-green-400 hidden sm:inline">{(food.fiber * (food.count || 1)).toFixed(1)}g Fiber</span>
+                        )}
+                        {food.sugar && food.sugar > 0 && (
+                          <span className="text-pink-400 hidden sm:inline">{(food.sugar * (food.count || 1)).toFixed(1)}g Sugar</span>
+                        )}
                       </div>
                     </div>
                     
@@ -859,24 +877,47 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
         // Filter foods by date range
         const getFilteredFoods = () => {
           if (analysisRange === 'all') return foods;
-          
+
           let startDate: string;
           let endDate = customEndDate;
-          
+
           if (analysisRange === 'custom') {
             startDate = customStartDate;
           } else {
             startDate = getDateNDaysAgo(parseInt(analysisRange));
             endDate = formatDate(new Date());
           }
-          
+
           return foods.filter(f => f.date >= startDate && f.date <= endDate);
+        };
+
+        const getDailyMacros = () => {
+          const filtered = getFilteredFoods();
+          const dailyMap = new Map<string, { sugar: number; fiber: number }>();
+
+          filtered.forEach(food => {
+            const existing = dailyMap.get(food.date) || { sugar: 0, fiber: 0 };
+            dailyMap.set(food.date, {
+              sugar: existing.sugar + (food.sugar || 0) * (food.count || 1),
+              fiber: existing.fiber + (food.fiber || 0) * (food.count || 1),
+            });
+          });
+
+          return Array.from(dailyMap.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([date, data]) => ({
+              date,
+              sugar: Math.round(data.sugar * 10) / 10,
+              fiber: Math.round(data.fiber * 10) / 10,
+            }));
         };
         
         const filteredFoods = getFilteredFoods();
         const filteredContributions = calculateFoodContributions(filteredFoods);
         const totalCals = filteredFoods.reduce((sum, f) => sum + f.calories * (f.count || 1), 0);
         const totalProtein = filteredFoods.reduce((sum, f) => sum + f.protein * (f.count || 1), 0);
+        const totalFiber = filteredFoods.reduce((sum, f) => sum + (f.fiber || 0) * (f.count || 1), 0);
+        const totalSugar = filteredFoods.reduce((sum, f) => sum + (f.sugar || 0) * (f.count || 1), 0);
         
         return (
         <>
@@ -928,9 +969,11 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
             </div>
             <div className="flex gap-4 mt-3 text-sm">
               <span className="text-gray-400">
-                📊 {filteredFoods.length} entries | 
-                🔥 {totalCals.toLocaleString()} cal | 
-                🥩 {totalProtein.toFixed(1)}g protein
+                📊 {filteredFoods.length} entries |
+                🔥 {totalCals.toLocaleString()} cal |
+                🥩 {totalProtein.toFixed(1)}g protein |
+                🌱 {totalFiber.toFixed(1)}g fiber |
+                🍬 {totalSugar.toFixed(1)}g sugar
               </span>
             </div>
           </div>
@@ -1020,6 +1063,61 @@ export default function FoodTracker({ userId, refreshTrigger }: FoodTrackerProps
                   <p className="text-center text-gray-500 py-4">No data for selected range</p>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Sugar & Fiber Tracking Chart */}
+          <div className="glass rounded-2xl p-6">
+            <h3 className="font-semibold text-lg mb-4">🍬 Sugar & Fiber Intake Trend</h3>
+            <div className="h-64">
+              {(() => {
+                const dailyData = getDailyMacros();
+                return dailyData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={dailyData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#ffffff60"
+                        fontSize={12}
+                        tickFormatter={(date) => formatDisplayDate(date)}
+                      />
+                      <YAxis stroke="#ffffff60" fontSize={12} />
+                      <Tooltip
+                        {...tooltipStyle}
+                        labelFormatter={(date) => formatDisplayDate(date)}
+                        formatter={(value: number, name: string) => [
+                          `${value.toFixed(1)}g`,
+                          name === 'sugar' ? 'Sugar' : 'Fiber'
+                        ]}
+                      />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="sugar"
+                        stroke="#ec4899"
+                        strokeWidth={2}
+                        name="Sugar"
+                        dot={{ fill: '#ec4899', strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="fiber"
+                        stroke="#10b981"
+                        strokeWidth={2}
+                        name="Fiber"
+                        dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-gray-500">
+                    <p>No sugar/fiber data for selected range</p>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </>

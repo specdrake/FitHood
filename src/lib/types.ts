@@ -47,6 +47,7 @@ export interface DailySummary {
   totalCarbs: number;
   totalFat: number;
   totalFiber: number;
+  totalSugar: number;
   foodEntries: FoodEntry[];
   workoutEntries: WorkoutEntry[];
   weight?: number;

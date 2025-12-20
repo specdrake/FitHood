@@ -8,6 +8,7 @@ export interface FoodItem {
   carbs: number;
   fat: number;
   fiber?: number;
+  sugar?: number;
   category: 'dairy' | 'protein' | 'grains' | 'vegetables' | 'fruits' | 'snacks' | 'beverages' | 'sweets' | 'cooked';
   servingSize?: string;
   source?: 'nin' | 'local';
@@ -75,16 +76,16 @@ const NIN_RAW_DATA: FoodItem[] = [
   { name: 'Bitter Gourd (Karela)', calories: 25, protein: 1.6, carbs: 4.2, fat: 0.2, fiber: 1.7, category: 'vegetables', source: 'nin' },
 
   // Fruits
-  { name: 'Banana', calories: 116, protein: 1.2, carbs: 27.2, fat: 0.3, fiber: 0.4, category: 'fruits', source: 'nin' },
-  { name: 'Apple', calories: 59, protein: 0.2, carbs: 13.7, fat: 0.5, fiber: 1.0, category: 'fruits', source: 'nin' },
-  { name: 'Mango', calories: 74, protein: 0.6, carbs: 16.9, fat: 0.4, fiber: 0.7, category: 'fruits', source: 'nin' },
-  { name: 'Papaya', calories: 32, protein: 0.6, carbs: 7.2, fat: 0.1, fiber: 0.8, category: 'fruits', source: 'nin' },
-  { name: 'Orange', calories: 48, protein: 0.7, carbs: 10.9, fat: 0.2, fiber: 0.3, category: 'fruits', source: 'nin' },
-  { name: 'Grapes', calories: 71, protein: 0.5, carbs: 16.5, fat: 0.3, fiber: 0.6, category: 'fruits', source: 'nin' },
-  { name: 'Watermelon', calories: 26, protein: 0.2, carbs: 5.9, fat: 0.2, fiber: 0.2, category: 'fruits', source: 'nin' },
-  { name: 'Pomegranate', calories: 65, protein: 1.6, carbs: 14.5, fat: 0.1, fiber: 5.1, category: 'fruits', source: 'nin' },
-  { name: 'Guava', calories: 51, protein: 0.9, carbs: 11.2, fat: 0.3, fiber: 5.2, category: 'fruits', source: 'nin' },
-  { name: 'Chikoo/Sapota', calories: 98, protein: 0.7, carbs: 21.4, fat: 1.1, fiber: 2.6, category: 'fruits', source: 'nin' },
+  { name: 'Banana', calories: 116, protein: 1.2, carbs: 27.2, fat: 0.3, fiber: 0.4, sugar: 12.2, category: 'fruits', source: 'nin' },
+  { name: 'Apple', calories: 59, protein: 0.2, carbs: 13.7, fat: 0.5, fiber: 1.0, sugar: 10.4, category: 'fruits', source: 'nin' },
+  { name: 'Mango', calories: 74, protein: 0.6, carbs: 16.9, fat: 0.4, fiber: 0.7, sugar: 14.8, category: 'fruits', source: 'nin' },
+  { name: 'Papaya', calories: 32, protein: 0.6, carbs: 7.2, fat: 0.1, fiber: 0.8, sugar: 5.9, category: 'fruits', source: 'nin' },
+  { name: 'Orange', calories: 48, protein: 0.7, carbs: 10.9, fat: 0.2, fiber: 0.3, sugar: 8.5, category: 'fruits', source: 'nin' },
+  { name: 'Grapes', calories: 71, protein: 0.5, carbs: 16.5, fat: 0.3, fiber: 0.6, sugar: 15.5, category: 'fruits', source: 'nin' },
+  { name: 'Watermelon', calories: 26, protein: 0.2, carbs: 5.9, fat: 0.2, fiber: 0.2, sugar: 4.7, category: 'fruits', source: 'nin' },
+  { name: 'Pomegranate', calories: 65, protein: 1.6, carbs: 14.5, fat: 0.1, fiber: 5.1, sugar: 10.0, category: 'fruits', source: 'nin' },
+  { name: 'Guava', calories: 51, protein: 0.9, carbs: 11.2, fat: 0.3, fiber: 5.2, sugar: 8.9, category: 'fruits', source: 'nin' },
+  { name: 'Chikoo/Sapota', calories: 98, protein: 0.7, carbs: 21.4, fat: 1.1, fiber: 2.6, sugar: 19.0, category: 'fruits', source: 'nin' },
 
   // Nuts & Seeds
   { name: 'Almonds (Badam)', calories: 609, protein: 20.8, carbs: 10.5, fat: 58.9, fiber: 1.7, category: 'snacks', source: 'nin' },
@@ -207,14 +208,14 @@ const COOKED_FOODS: FoodItem[] = [
   { name: 'Black Coffee (1 cup)', calories: 5, protein: 0, carbs: 1, fat: 0, category: 'beverages', servingSize: '150ml' },
   { name: 'Green Tea (1 cup)', calories: 2, protein: 0, carbs: 0, fat: 0, category: 'beverages', servingSize: '150ml' },
   { name: 'Nimbu Pani (1 glass)', calories: 30, protein: 0, carbs: 8, fat: 0, category: 'beverages', servingSize: '200ml' },
-  { name: 'Coconut Water (1 glass)', calories: 45, protein: 2, carbs: 9, fat: 0, category: 'beverages', servingSize: '200ml' },
+  { name: 'Coconut Water (1 glass)', calories: 45, protein: 2, carbs: 9, fat: 0, sugar: 7.0, category: 'beverages', servingSize: '200ml' },
   { name: 'Mango Shake (1 glass)', calories: 250, protein: 6, carbs: 45, fat: 6, category: 'beverages', servingSize: '250ml' },
   { name: 'Banana Shake (1 glass)', calories: 220, protein: 8, carbs: 35, fat: 6, category: 'beverages', servingSize: '250ml' },
 
   // Sweets
-  { name: 'Gulab Jamun (1 piece)', calories: 150, protein: 2, carbs: 20, fat: 7, category: 'sweets', servingSize: '1 piece' },
-  { name: 'Rasgulla (1 piece)', calories: 120, protein: 2, carbs: 22, fat: 3, category: 'sweets', servingSize: '1 piece' },
-  { name: 'Jalebi (1 piece)', calories: 150, protein: 1, carbs: 30, fat: 4, category: 'sweets', servingSize: '1 piece' },
+  { name: 'Gulab Jamun (1 piece)', calories: 150, protein: 2, carbs: 20, fat: 7, sugar: 15, category: 'sweets', servingSize: '1 piece' },
+  { name: 'Rasgulla (1 piece)', calories: 120, protein: 2, carbs: 22, fat: 3, sugar: 18, category: 'sweets', servingSize: '1 piece' },
+  { name: 'Jalebi (1 piece)', calories: 150, protein: 1, carbs: 30, fat: 4, sugar: 22, category: 'sweets', servingSize: '1 piece' },
   { name: 'Ladoo Besan (1 piece)', calories: 180, protein: 3, carbs: 22, fat: 9, category: 'sweets', servingSize: '1 piece' },
   { name: 'Ladoo Motichoor (1 piece)', calories: 150, protein: 2, carbs: 25, fat: 5, category: 'sweets', servingSize: '1 piece' },
   { name: 'Barfi (1 piece)', calories: 150, protein: 3, carbs: 20, fat: 7, category: 'sweets', servingSize: '1 piece' },
